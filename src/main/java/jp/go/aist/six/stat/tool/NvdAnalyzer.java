@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import jp.go.aist.six.stat.model.Table;
+import jp.go.aist.six.stat.model.VulnerabilitySummary;
 import jp.go.aist.six.util.repository.QueryResults;
 import jp.go.aist.six.vuln.core.SixVulnContext;
 import jp.go.aist.six.vuln.model.scap.cpe.CpeName;
@@ -13,9 +15,6 @@ import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerabilityType;
 import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerableSoftwareType;
 import jp.go.aist.six.vuln.repository.scap.nvd.NvdRepository;
 import jp.go.aist.six.vuln.repository.scap.nvd.VulnerabilityQueryParams;
-import jp.go.aist.six.stat.model.OvalRepositoryProvider;
-import jp.go.aist.six.stat.model.Table;
-import jp.go.aist.six.stat.model.VulnerabilitySummary;
 
 
 
@@ -75,7 +74,7 @@ public class NvdAnalyzer
             Object[]  values = new Object[2];
             values[0] = year;
 
-            list = findVulnIdExceptRejectedByCveYear( year );
+            list = findVulnIdByCveYearExceptRejected( year );
             values[1] = list.size();
 
             report.addRow( values );
@@ -233,8 +232,9 @@ public class NvdAnalyzer
 
 
     /**
+     * Lists the CVE IDs which were released in the specified year.
      */
-    public List<String> findVulnIdExceptRejectedByCveYear(
+    public List<String> findVulnIdByCveYearExceptRejected(
                     final int year
                     )
     throws Exception
@@ -295,13 +295,18 @@ public class NvdAnalyzer
     }
 
 
+    /**
+     * The REJECTed entry's summary starts with "** REJECT **  DO NOT USE THIS CANDIDATE NUMBER.".
+     */
+    public static final String  REJECTED_PATTERN = "!\\*\\* REJECT \\*\\*";
+
     public VulnerabilityQueryParams createCveYearExceptRejectedQuery(
                     final int year
                     )
     throws Exception
     {
         VulnerabilityQueryParams  params = createCveYearIncludingRejectedQuery( year );
-        params.setSummary( "!\\*\\* REJECT \\*\\*" );
+        params.setSummary( REJECTED_PATTERN );
 
         return params;
     }

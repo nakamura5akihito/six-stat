@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- ====================================================================== -->
+<!-- Ant build file (http://ant.apache.org/) for Ant 1.6.2 or above.        -->
+<!-- ====================================================================== -->
+
+<project name="six-stat" default="package" basedir=".">
+
+  <!-- ====================================================================== -->
+  <!-- Import maven-build.xml into the current project                        -->
+  <!-- ====================================================================== -->
+
+  <import file="maven-build.xml"/>
+  
+  <!-- ====================================================================== -->
+  <!-- Help target                                                            -->
+  <!-- ====================================================================== -->
+
+  <target name="help">
+    <echo message="Please run: $ant -projecthelp"/>
+  </target>
+
+    <!-- ************************************************************** -->
+    <!-- *  NVD XML Data Feed                                         * -->
+    <!-- ************************************************************** -->
+
+    <target name="stat.all">
+        <record name="build.log" loglevel="verbose" />
+        <java
+            classname="jp.go.aist.six.stat.tool.ScapReporter"
+            fork="true"
+            maxmemory="512m"
+            >
+            <classpath>
+                <path refid="build.classpath"/>
+                <pathelement location="${maven.build.outputDir}"/>
+                <pathelement location="${maven.build.resourceDir.0}"/>
+                <pathelement location="${maven.build.testResourceDir.0}"/>
+            </classpath>
+        </java>
+    </target>
+
+</project>

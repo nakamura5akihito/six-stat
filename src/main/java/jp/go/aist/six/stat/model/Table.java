@@ -112,7 +112,7 @@ public class Table
 
     /**
      */
-    public void storeToCsv(
+    public void saveToCsv(
                     final File file
                     )
     throws Exception
