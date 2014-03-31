@@ -11,7 +11,7 @@ import jp.go.aist.six.stat.model.Table;
 
 /**
  */
-public class ScapReporter
+public class StatReporter
 {
 
     public static final int  PERIOD_BEGIN = 2004;
@@ -24,7 +24,7 @@ public class ScapReporter
                     )
     throws Exception
     {
-        ScapReporter  reporter = new ScapReporter();
+        StatReporter  reporter = new StatReporter();
         reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
     }
 
@@ -38,7 +38,7 @@ public class ScapReporter
 
     /**
      */
-    public ScapReporter()
+    public StatReporter()
     {
         _mkdirs();
 
