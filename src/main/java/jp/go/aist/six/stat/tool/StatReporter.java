@@ -2,8 +2,12 @@ package jp.go.aist.six.stat.tool;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import jp.go.aist.six.stat.model.OvalRepositoryProvider;
 import jp.go.aist.six.stat.model.Table;
 
@@ -11,10 +15,10 @@ import jp.go.aist.six.stat.model.Table;
 
 /**
  */
-public class ScapReporter
+public class StatReporter
 {
 
-    public static final int  PERIOD_BEGIN = 2004;
+    public static final int  PERIOD_BEGIN = 1999;
     public static final int  PERIOD_END = 2013;
 
 
@@ -24,23 +28,26 @@ public class ScapReporter
                     )
     throws Exception
     {
-        ScapReporter  reporter = new ScapReporter();
+        StatReporter  reporter = new StatReporter();
         reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
     }
 
 
+    private static final  String  _OUTPUT_DIR_ = "/tmp/six-stat";
 
 
 
+    private final File  _output_dir;
     protected NvdAnalyzer    _nvd_analyzer;
     protected OvalAnalyzer  _oval_analyzer;
 
 
     /**
      */
-    public ScapReporter()
+    public StatReporter()
     {
-        _mkdirs();
+        _output_dir = _mkOutputDirs();
 
         _nvd_analyzer = new NvdAnalyzer();
        _oval_analyzer = new OvalAnalyzer();
@@ -48,6 +55,67 @@ public class ScapReporter
 
 
 
+
+
+    /**
+     * Report: OVAL Coverage of CVE
+     *
+     * { "Year", "NVD/CVE (except Rejected)", "OVAL (Mitre except Deprecated)", "Coverage", "CVE covered by OVAL" }
+     * 1999, nvd-cve_count_1999, oval_count_1999, coverage_1999, [cve-list1]
+     * 2000, nvd-cve_count_2000, oval_count_2000, coverage_2000, [cve-list2]
+     * ...
+     */
+    public void reportOvalCoveredOfCve(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** OVAL: Coverage of CVE *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "oval_coverage-of-cve_";
+        String[]  table_header = new String[] {
+                        "Year",
+                        "NVD/CVE (except Rejected)",
+                        "OVAL/CVE (Mitre except Deprecated)",
+                        "Coverage",
+                        "CVE covered by OVAL"
+                        };
+        Table  table = new Table( table_header );
+
+        Map<Integer,Long>  nvd_cve_counts = getNumberOfNvdCveEntriesByYear( year_begin, year_end );
+        for (int  year = year_begin; year <= year_end; year++) {
+            Set<String>  oval_cve_set =
+                            _oval_analyzer.findCveIdFromVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
+
+            long  nvd_cve_count = nvd_cve_counts.get( year );
+            int  oval_cve_count = oval_cve_set.size();
+            Formatter  formatter = new Formatter();
+            formatter.format( "%.3f", ((float)oval_cve_count / (float)nvd_cve_count) );
+
+            table.addRow( new Object[] {
+                            year,
+                            nvd_cve_count,
+                            oval_cve_count,
+                            formatter.out(),
+                            oval_cve_set
+                            });
+
+            formatter.close();
+        }
+
+        //output//
+        _outputReport( table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    /**
+     * Report:
+     * @param year_begin
+     * @param year_end
+     */
     public void reportNumberOfEntries(
                     final int year_begin,
                     final int year_end
@@ -61,8 +129,8 @@ public class ScapReporter
         String[]  table_header = new String[] {
                         "Year",
                         "NVD/CVE (except Rejected)",
-                        "OVAL (Mitre except Deprected)",
-                        "OVAL (Red Hat except Deprecated)"
+                        "OVAL (Mitre V Def, except Deprected)",
+                        "OVAL (Red Hat P Def, except Deprecated)"
                         };
 
         //analysis//
@@ -236,11 +304,8 @@ public class ScapReporter
 
 
     ///////////////////////////////////////////////////////////////////////
-    //  I/O
+    //  file I/O
     ///////////////////////////////////////////////////////////////////////
-
-    private static final  String  _OUTPUT_DIR_ = "analysis";
-
 
     /**
      * Output CSV.
@@ -251,25 +316,39 @@ public class ScapReporter
                     )
     throws Exception
     {
-        File  file = _createOutputFile( filename + "_" + System.currentTimeMillis() + ".csv" );
+        File  file = _createOutputFile( filename + ".csv" );
         _println( System.out, "output file: " + file.getName() );
         table.saveToCsv( file );
     }
 
 
 
-    private static void _mkdirs()
+    private static final String  _DATE_FORMAT_ = "yyyy-MM-dd'T'HHmmss.SSS";
+
+    private File _mkOutputDirs()
     {
-        File  dir = new File( _OUTPUT_DIR_ );
+        SimpleDateFormat  formatter = new SimpleDateFormat( _DATE_FORMAT_ );
+        String  dirname = formatter.format( new Date() );
+        File  dir = new File( _OUTPUT_DIR_, dirname );
         dir.mkdirs();
+        _println( System.out, "output dir: " + dir.getAbsolutePath() );
+
+        return dir;
     }
 
 
-    protected static File _createOutputFile(
+    protected File _getOutputDir()
+    {
+        return _output_dir;
+    }
+
+
+
+    protected File _createOutputFile(
                     final String filename
                     )
     {
-        File  file = new File( _OUTPUT_DIR_, filename );
+        File  file = new File( _getOutputDir(), filename );
         return file;
     }
 
