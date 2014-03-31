@@ -21,7 +21,7 @@
   </target>
 
     <!-- ************************************************************** -->
-    <!-- *  NVD XML Data Feed                                         * -->
+    <!-- * Stat Report                                                * -->
     <!-- ************************************************************** -->
 
     <target name="stat.all">
@@ -40,4 +40,106 @@
         </java>
     </target>
 
+
+	<!-- ************************************************************** -->
+    <!-- *  Data Installation                                         * -->
+    <!-- ************************************************************** -->
+
+    <property name="oval.mitre.dir" value="/tmp/oval_mitre_20140331"/>
+    <target name="oval.mitre.install-all-files">
+        <record name="build.log" loglevel="verbose" />
+        <java
+            classname="jp.go.aist.six.oval.core.repository.OvalDocumentInstaller"
+            fork="true"
+            maxmemory="768m"
+            >
+            <!-- If we shoose 512m maxmemory, it ends up with out-of-memory error. -->
+            <arg value="${oval.mitre.dir}/ios.xml"/>
+            <arg value="${oval.mitre.dir}/macos.xml"/>
+            <arg value="${oval.mitre.dir}/pixos.xml"/>
+            <arg value="${oval.mitre.dir}/unix.xml"/>
+            <arg value="${oval.mitre.dir}/windows.xml"/>
+            <classpath>
+                <path refid="build.classpath"/>
+                <pathelement location="${maven.build.outputDir}"/>
+                <pathelement location="${maven.build.resourceDir.0}"/>
+                <pathelement location="${maven.build.testResourceDir.0}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <property name="oval.redhat.dir" value="/tmp/oval_redhat_20140331"/>
+    <target name="oval.redhat.install-all-files">
+        <record name="build.log" loglevel="verbose" />
+        <java
+            classname="jp.go.aist.six.oval.core.repository.OvalDocumentInstaller"
+            fork="true"
+            maxmemory="512m"
+            >
+            <arg value="${oval.redhat.dir}/com.redhat.rhsa-all.xml"/>
+            <classpath>
+                <path refid="build.classpath"/>
+                <pathelement location="${maven.build.outputDir}"/>
+                <pathelement location="${maven.build.resourceDir.0}"/>
+                <pathelement location="${maven.build.testResourceDir.0}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <!-- ************************************************************** -->
+    <!-- *  NVD XML Data Feed                                         * -->
+    <!-- ************************************************************** -->
+    <property name="nvd.xmldatafeed.dir" value="/tmp/nvd_20140331"/>
+
+	<target name="nvd.install-all-files">
+        <record name="build.log" loglevel="verbose" />
+        <java
+            classname="jp.go.aist.six.vuln.core.repository.scap.nvd.NvdDataFeedInstaller"
+            fork="true"
+            maxmemory="512m"
+            >
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2002.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2003.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2004.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2005.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2006.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2007.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2008.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2009.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2010.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2011.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2012.xml"/>
+            <arg value="${nvd.xmldatafeed.dir}/nvdcve-2.0-2013.xml"/>
+            <classpath>
+                <path refid="build.classpath"/>
+                <pathelement location="${maven.build.outputDir}"/>
+                <pathelement location="${maven.build.resourceDir.0}"/>
+                <pathelement location="${maven.build.testResourceDir.0}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <!-- ************************************************************** -->
+    <!-- *  CVE List                                                  * -->
+    <!-- ************************************************************** -->
+    <property name="data.cve.dir" value="/tmp/cve_20140331"/>
+
+	<target name="cve.install-all-files">
+        <record name="build.log" loglevel="verbose" />
+        <java
+            classname="jp.go.aist.six.vuln.core.repository.scap.cve.CveListInstaller"
+            fork="true"
+            maxmemory="512m"
+            >
+            <arg value="${data.cve.dir}/allitems.xml"/>
+            <classpath>
+                <path refid="build.classpath"/>
+                <pathelement location="${maven.build.outputDir}"/>
+                <pathelement location="${maven.build.resourceDir.0}"/>
+                <pathelement location="${maven.build.testResourceDir.0}"/>
+            </classpath>
+        </java>
+    </target>
+
+    
 </project>
