@@ -298,7 +298,7 @@ public class NvdAnalyzer
     /**
      * The REJECTed entry's summary starts with "** REJECT **  DO NOT USE THIS CANDIDATE NUMBER.".
      */
-    public static final String  REJECTED_PATTERN = "!\\*\\* REJECT \\*\\*";
+    public static final String  EXCEPT_REJECTED_PATTERN = "!\\*\\* REJECT \\*\\*";
 
     public VulnerabilityQueryParams createCveYearExceptRejectedQuery(
                     final int year
@@ -306,7 +306,7 @@ public class NvdAnalyzer
     throws Exception
     {
         VulnerabilityQueryParams  params = createCveYearIncludingRejectedQuery( year );
-        params.setSummary( REJECTED_PATTERN );
+        params.setSummary( EXCEPT_REJECTED_PATTERN );
 
         return params;
     }

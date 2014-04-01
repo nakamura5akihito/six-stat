@@ -34,8 +34,8 @@ public class StatReporter
     {
         StatReporter  reporter = new StatReporter();
         reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
         reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportCveByCvss( PERIOD_BEGIN, PERIOD_END );
     }
 
 
@@ -89,7 +89,7 @@ public class StatReporter
                         };
         Table  table = new Table( table_header );
 
-        Map<Integer,Long>  nvd_cve_counts = getNumberOfNvdCveEntriesByYear( year_begin, year_end );
+        Map<Integer,Long>  nvd_cve_counts = getNumberOfNvdCveEntriesExceptRejectedByYear( year_begin, year_end );
         for (int  year = year_begin; year <= year_end; year++) {
             Set<String>  oval_cve_set =
                             _oval_analyzer.findCveIdFromVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
@@ -124,19 +124,16 @@ public class StatReporter
      *          Note: Now, rejected entries are filtered in the query processing.
      *                So, the count must be zero in every year.
      *
-     * { "Year", "High (7.0--10.0)", "Medium (4.0--6.9)", "Low (0.0--3.9)",
-     *   "Unknown (no CVSS)", "Rejected", "NVD/CVE (except Rejected and Unknown)" }
-     * 1999, ...
-     * 2000, ...
-     * ...
+     * { "Year", "NVD/CVE (except Rejected),
+     * 　"High (7.0--10.0)", "Medium (4.0--6.9)", "Low (0.0--3.9)", "Unknown (no CVSS)"" }
      */
-    public void reportCveByCvss(
+    public void reportNvdCveByCvss(
                     final int year_begin,
                     final int year_end
                     )
     throws Exception
     {
-        String  title = "***** NVD: CVE by CVSS *****";
+        String  title = "***** NVD: CVE by CVSS score *****";
         _println( System.out, title );
 
         final String  filename_prefix = "nvd_cve-by-cvss_";
@@ -145,9 +142,8 @@ public class StatReporter
                         "High (7.0--10.0)",
                         "Medium (4.0--6.9)",
                         "Low (0.0--3.9)",
-                        "Unknown (no CVSS)",
-                        "Rejected",
-                        "NVD/CVE (except Rejected and Unknown)"
+                        "Unknown (no CVSS except Rejected)",
+                        "NVD/CVE (H+M+L+U)"
                         };
 
         Table  table = new Table( table_header );
@@ -156,9 +152,8 @@ public class StatReporter
             int  count_medium = 0;
             int  count_high = 0;
             int  count_unknown = 0;
-            int  count_reject = 0;
 
-            List<VulnerabilityType>  vuln_list =  _nvd_analyzer.findVulnIncludingRejectedByCveYear( year );
+            List<VulnerabilityType>  vuln_list =  _nvd_analyzer.findVulnExceptRejectedByCveYear( year );
             for (VulnerabilityType  vuln : vuln_list) {
                 Double  score = null;
                 CvssImpactType  cvss = vuln.getCvss();
@@ -181,12 +176,6 @@ public class StatReporter
                         count_high++;
                     }
                 }
-
-                String  summary = vuln.getSummary();
-                if (summary != null  &&  summary.startsWith( "** REJECT **" )) {
-                    count_reject++;
-                    _println( System.out, "  -- REJECT" );
-                }
             }
 
             table.addRow( new Object[] {
@@ -195,15 +184,13 @@ public class StatReporter
                             count_medium,
                             count_high,
                             count_unknown,
-                            count_reject,
-                            count_low + count_medium + count_high
+                            count_low + count_medium + count_high + count_unknown,
                             });
         }
 
         //output//
         _outputReport( table, filename_prefix + year_begin + "-" + year_end );
     }
-
 
 
 
@@ -257,11 +244,11 @@ public class StatReporter
     /**
      * Number of NVD/CVE Entries.
      *
-     * 1999, count1999
-     * 2000, count2000
+     * 1999, 1234
+     * 2000, 5678
      * ...
      */
-    public Map<Integer,Long> getNumberOfNvdCveEntriesByYear(
+    public Map<Integer,Long> getNumberOfNvdCveEntriesExceptRejectedByYear(
                     final int  year_begin,
                     final int  year_end
                     )
