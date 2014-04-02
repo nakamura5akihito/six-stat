@@ -39,10 +39,10 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportCveByCwe( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
     }
 
 
@@ -130,6 +130,69 @@ public class StatReporter
      *
      * CVE : CWE = 1 : 0..*
      *
+     * { "CWE", 1999, ..., 2013 }
+     * "unknown" CWE: Entries which contains no CWE property.
+     */
+    public void reportNvdCveByCwe(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** NVD: CVE by CWE *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "nvd_cve-by-cwe_";
+        final String[]  year_table_header = new String[] {
+                        "CWE",
+                        "NVD/CVE (except Rejected)"
+                        };
+
+        String  total_column_name = "Total NVD/CVE (" + year_begin + "--" + year_end + ", except Rejected)";
+        final String[]  total_table_header_prefix = new String[] {
+                        "CWE",
+                        total_column_name,
+//                        "1999", "2000", ..., "2012"
+                        };
+
+        /* analysis */
+        Map<Integer,Map<String,Collection<String>>>  history_cwe_cve_map = new TreeMap<Integer,Map<String,Collection<String>>>();
+        //<year,Map<CWE,{CVE}>>
+
+        List<String>  total_table_header = new ArrayList<String>( Arrays.asList( total_table_header_prefix ) );
+        Map<String,Collection<String>>  total_cwe_cve_map = new TreeMap<String,Collection<String>>();
+        //<CWE,{CVE}>
+
+        for (int  year = year_begin; year <= year_end; year++) {
+            Map<String,Collection<String>>  year_cwe_cve_map = new TreeMap<String,Collection<String>>();
+            //<CWE,{CVE}>
+
+            List<VulnerabilityType>  vuln_list =  _nvd_analyzer.findVulnExceptRejectedByCveYear( year );
+            for (VulnerabilityType  vuln : vuln_list) {
+                _analyzeCwe( vuln, year_cwe_cve_map );
+            }
+            history_cwe_cve_map.put( new Integer( year ), year_cwe_cve_map );
+
+            /* year */
+            Table  year_table = _buildSimpleReport( year_table_header, year_cwe_cve_map );
+            _outputReport( year_table, filename_prefix + year );
+
+            _meargeCweCveMapTo( year_cwe_cve_map, total_cwe_cve_map );
+            total_table_header.add( String.valueOf( year ) );
+        }
+
+        /* year, total */
+        Table  total_table = _buildTotalReport(
+                        total_table_header.toArray( new String[0] ), total_cwe_cve_map, history_cwe_cve_map );
+        _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+    /**
+     * NVD: CVE by CWE, yearly.
+     *
+     * CVE : CWE = 1 : 0..*
+     *
      * { "CWE", "NVD/CVE (except Rejected)" } by year
      * "unknown" CWE: Entries which contains no CWE property.
      */
@@ -196,7 +259,7 @@ public class StatReporter
             Collection<String>  total_cve_list = total_cwe_cve_map.get( cwe );
             List<Object>  row = new ArrayList<Object>();
             row.add( cwe );
-            row.add( total_cve_list.size() ); //1999--2012
+            row.add( total_cve_list.size() ); //e.g. 1999--2013
 
             for (Integer  year : history_cwe_cve_map.keySet()) {
                 // 1999, 2000, ...
@@ -252,6 +315,14 @@ public class StatReporter
         }
     }
 
+
+    /**
+     * Appends a CVE-ID to CWE-CVE map.
+     * NVD entry : CWE = 1 : n
+     *
+     * @param vuln
+     * @param cwe_cve_map
+     */
     private void _analyzeCwe(
                     final VulnerabilityType vuln,
                     final Map<String,Collection<String>> cwe_cve_map
@@ -262,9 +333,9 @@ public class StatReporter
             _println( System.out, "CWE unknown: " + vuln.getId() );
             _addCve( CWE_UNKNOWN, vuln.getId(), cwe_cve_map );
         } else {
-            if (cwe_list.size() > 1) {
-                _println( System.out, "multiple CWE: " + vuln.getId() );
-            }
+//            if (cwe_list.size() > 1) {
+//                _println( System.out, "multiple CWE: " + vuln.getId() );
+//            }
             for (CweReferenceType  cwe : cwe_list) {
                 _addCve( cwe.getId(), vuln.getId(), cwe_cve_map );
             }
