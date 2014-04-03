@@ -174,7 +174,7 @@ public class StatReporter
             history_cwe_cve_map.put( new Integer( year ), year_cwe_cve_map );
 
             /* year */
-            Table  year_table = _buildSimpleReport( year_table_header, year_cwe_cve_map );
+            Table  year_table = _buildNvdCveByCweSimpleReport( year_table_header, year_cwe_cve_map );
             _outputReport( year_table, filename_prefix + year );
 
             _meargeCweCveMapTo( year_cwe_cve_map, total_cwe_cve_map );
@@ -182,14 +182,14 @@ public class StatReporter
         }
 
         /* year, total */
-        Table  total_table = _buildTotalReport(
+        Table  total_table = _buildNvdCveByCweTotalReport(
                         total_table_header.toArray( new String[0] ), total_cwe_cve_map, history_cwe_cve_map );
         _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
     }
 
 
 
-    private Table _buildTotalReport(
+    private Table _buildNvdCveByCweTotalReport(
                     final String[] table_header,
                     final Map<String,Collection<String>> total_cwe_cve_map,
                     final Map<Integer,Map<String,Collection<String>>> history_cwe_cve_map
@@ -220,7 +220,7 @@ public class StatReporter
         return table;
     }
 
-    private Table _buildSimpleReport(
+    private Table _buildNvdCveByCweSimpleReport(
                     final String[] table_header,
                     final Map<String,Collection<String>> cwe_cve_map
                     )
