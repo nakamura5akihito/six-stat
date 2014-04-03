@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
@@ -14,6 +15,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import jp.go.aist.six.oval.model.common.FamilyEnumeration;
+import jp.go.aist.six.oval.model.definitions.AffectedType;
+import jp.go.aist.six.oval.model.definitions.DefinitionType;
 import jp.go.aist.six.stat.model.OvalRepositoryProvider;
 import jp.go.aist.six.stat.model.Table;
 import jp.go.aist.six.vuln.model.scap.cvss.BaseMetricsType;
@@ -39,10 +43,11 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
-//        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
         reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
-//        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
     }
 
 
@@ -67,6 +72,9 @@ public class StatReporter
 
 
 
+    ////////////////////////////////////////////////////////////////////////////
+    // OVAL and NVD
+    ////////////////////////////////////////////////////////////////////////////
 
 
     /**
@@ -121,6 +129,177 @@ public class StatReporter
         _outputReport( table, filename_prefix + year_begin + "-" + year_end );
     }
 
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    // OVAL
+    ////////////////////////////////////////////////////////////////////////////
+
+    public static final String  FAMILY_ERROR = "error";
+
+    /**
+     * Report: OVAL: Vulnerability Definitions by OS family.
+     *
+     *
+     */
+    public void reportOvalVulnDefByFamily(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** OVAL: Vuln Def by Family *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "oval_vuln-def-by-family_";
+        final String[]  year_table_header = new String[] {
+                        "Family",
+                        "OVAL Vuln Def (except Deprecated)"
+                        };
+
+        /* analysis */
+        //<year,Map<Family,{OVAL}>>
+        Map<Integer,Map<FamilyEnumeration,Collection<String>>>  history_map =
+                        new TreeMap<Integer,Map<FamilyEnumeration,Collection<String>>>();
+
+        //Map<Family,{OVAL}>
+        Map<FamilyEnumeration,Collection<String>>  total_map =
+                        new EnumMap<FamilyEnumeration,Collection<String>>( FamilyEnumeration.class );
+        List<String>  total_table_header = new ArrayList<String>( Arrays.asList( year_table_header ) );
+
+        for (int  year = year_begin; year <= year_end; year++) {
+            //Map<Family,{OVAL}>
+            Map<FamilyEnumeration,Collection<String>>  year_map = _buildOvalFamilyMapOfYear( year );
+            Table  year_table = _buildOvalVulnDefByFamilyYearReport( year_table_header, year_map );
+            _outputReport( year_table, filename_prefix + year );
+
+            _meargeOvalVulnDefByFamilyMapTo( year_map, total_map );
+            total_table_header.add( String.valueOf( year ) );
+
+            history_map.put( new Integer( year ), year_map );
+        }
+
+        /* year, total */
+        Table  total_table = _buildOvalVulnDefByFamilyTotalReport(
+                        total_table_header.toArray( new String[0] ), total_map, history_map );
+        _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    /**
+     * Map: family -> {OVAL Definition ID}
+     */
+    private Map<FamilyEnumeration,Collection<String>> _buildOvalFamilyMapOfYear(
+                    final int year
+                    )
+    throws Exception
+    {
+        Collection<DefinitionType>  def_list =
+                        _oval_analyzer.findOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
+
+        Map<FamilyEnumeration,Collection<String>>  map =
+                        new EnumMap<FamilyEnumeration,Collection<String>>( FamilyEnumeration.class );
+        for (DefinitionType  def : def_list) {
+            //def : metadata : affected = 1 : 1 : n
+            Collection<AffectedType>  affected_list = def.getMetadata().getAffected();
+            if (affected_list == null  ||  affected_list.size() == 0) {
+                _println( System.out, "DATA ERROR --- no Affected metadata: " + def.getOvalId() );
+                continue;
+            }
+
+            for (AffectedType  affected : affected_list) {
+                FamilyEnumeration  family = affected.getFamily();
+                Collection<String>  oval_id_list = map.get( family );
+                if (oval_id_list == null) {
+                    oval_id_list = new TreeSet<String>();
+                    map.put( family, oval_id_list );
+                }
+                oval_id_list.add( def.getOvalId() );
+            }
+        }
+
+        return map;
+    }
+
+
+
+    /**
+     * family, OVAL Def,
+     */
+    private Table _buildOvalVulnDefByFamilyTotalReport(
+                    final String[] table_header,
+                    final Map<FamilyEnumeration,Collection<String>> total_map,
+                    final Map<Integer,Map<FamilyEnumeration,Collection<String>>> history_map
+                    )
+    {
+        Table  table = new Table( table_header );
+        for (FamilyEnumeration  family : total_map.keySet()) {
+            Collection<String>  total_oval_id_list = total_map.get( family );
+            List<Object>  row = new ArrayList<Object>();
+            row.add( family );
+            row.add( total_oval_id_list.size() ); //1999--2012
+
+            for (Integer  year : history_map.keySet()) {
+                // 1999, 2000, ...
+                Map<FamilyEnumeration,Collection<String>>  year_map = history_map.get( year );
+                Collection<String>  year_oval_id_list = year_map.get( family );
+                if (year_oval_id_list == null) {
+                    row.add( new Integer( 0 ) );
+                } else {
+                    row.add( year_oval_id_list.size() );
+                }
+            }
+
+            table.addRow( row );
+        }
+
+        return table;
+    }
+
+
+    private Table _buildOvalVulnDefByFamilyYearReport(
+                    final String[] table_header,
+                    final Map<FamilyEnumeration,Collection<String>> family_oval_map
+                    )
+    {
+        Table  table = new Table( table_header );
+        for (FamilyEnumeration  family : family_oval_map.keySet()) {
+            Collection<String>  oval_id_list = family_oval_map.get( family );
+            table.addRow( new Object[] {
+                            family,
+                            oval_id_list.size(),
+                            oval_id_list
+            });
+        }
+
+        return table;
+    }
+
+
+    private void _meargeOvalVulnDefByFamilyMapTo(
+                    final Map<FamilyEnumeration,Collection<String>> source_map,
+                    final Map<FamilyEnumeration,Collection<String>> dest_map
+                    )
+    {
+        for (FamilyEnumeration  family : source_map.keySet()) {
+            Collection<String>  source_oval_id_list = source_map.get( family );
+
+            Collection<String>  dest_oval_id_list = dest_map.get( family );
+            if (dest_oval_id_list == null) {
+                dest_oval_id_list = new TreeSet<String>();
+                dest_map.put( family, dest_oval_id_list );
+            }
+
+            dest_oval_id_list.addAll( source_oval_id_list );
+        }
+    }
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    // NVD
+    ////////////////////////////////////////////////////////////////////////////
 
 
     public static final String  CWE_UNKNOWN = "unknown";
