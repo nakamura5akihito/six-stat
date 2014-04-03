@@ -188,64 +188,6 @@ public class StatReporter
     }
 
 
-    /**
-     * NVD: CVE by CWE, yearly.
-     *
-     * CVE : CWE = 1 : 0..*
-     *
-     * { "CWE", "NVD/CVE (except Rejected)" } by year
-     * "unknown" CWE: Entries which contains no CWE property.
-     */
-    public void reportCveByCwe(
-                    final int year_begin,
-                    final int year_end
-                    )
-    throws Exception
-    {
-        String  title = "***** NVD: CVE by CWE *****";
-        _println( System.out, title );
-
-        final String  filename_prefix = "nvd_cve-by-cwe_";
-        final String[]  year_table_header = new String[] {
-                        "CWE",
-                        "NVD/CVE (except Rejected)"
-                        };
-        final String[]  total_table_header_prefix = new String[] {
-                        "CWE",
-                        "NVD/CVE (except Rejected)"
-//                        "1999", "2000", ..., "2012"
-                        };
-
-        /* analysis */
-        Map<Integer,Map<String,Collection<String>>>  history_cwe_cve_map = new TreeMap<Integer,Map<String,Collection<String>>>();
-        //<year,Map<CWE,{CVE}>>
-
-        List<String>  total_table_header = new ArrayList<String>( Arrays.asList( total_table_header_prefix ) );
-        Map<String,Collection<String>>  total_cwe_cve_map = new TreeMap<String,Collection<String>>();
-        //<CWE,{CVE}>
-        for (int  year = year_begin; year <= year_end; year++) {
-            Map<String,Collection<String>>  year_cwe_cve_map = new TreeMap<String,Collection<String>>();
-            //<CWE,{CVE}>
-            List<VulnerabilityType>  vuln_list =  _nvd_analyzer.findVulnExceptRejectedByCveYear( year );
-            for (VulnerabilityType  vuln : vuln_list) {
-                _analyzeCwe( vuln, year_cwe_cve_map );
-            }
-            history_cwe_cve_map.put( new Integer( year ), year_cwe_cve_map );
-
-            /* year */
-            Table  year_table = _buildSimpleReport( year_table_header, year_cwe_cve_map );
-            _outputReport( year_table, filename_prefix + year );
-
-            _meargeCweCveMapTo( year_cwe_cve_map, total_cwe_cve_map );
-            total_table_header.add( String.valueOf( year ) );
-        }
-
-        /* year, total */
-        Table  total_table = _buildTotalReport(
-                        total_table_header.toArray( new String[0] ), total_cwe_cve_map, history_cwe_cve_map );
-        _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
-    }
-
 
     private Table _buildTotalReport(
                     final String[] table_header,
