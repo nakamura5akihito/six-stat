@@ -20,6 +20,7 @@ import jp.go.aist.six.oval.model.definitions.AffectedType;
 import jp.go.aist.six.oval.model.definitions.DefinitionType;
 import jp.go.aist.six.stat.model.OvalRepositoryProvider;
 import jp.go.aist.six.stat.model.Table;
+import jp.go.aist.six.stat.model.VulnerabilitySummary;
 import jp.go.aist.six.vuln.model.scap.cvss.BaseMetricsType;
 import jp.go.aist.six.vuln.model.scap.cvss.CvssImpactType;
 import jp.go.aist.six.vuln.model.scap.vulnerability.CweReferenceType;
@@ -46,6 +47,7 @@ public class StatReporter
         reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
         reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
         reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
+        reporter.reportNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );  //TODO: product name normalization
         reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
         reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
     }
@@ -300,6 +302,105 @@ public class StatReporter
     ////////////////////////////////////////////////////////////////////////////
     // NVD
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Number of NVD/CVE entries by Product, Yearly
+     *
+     * {Product, #CVE,  AVG(CVSS), CVE ID}
+     * product1, count, avg_cvss, [CVE list]
+     * product2, count, avg_cvss, [CVE list]
+     * ...
+     */
+    public void reportNvdCveByProduct(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** NVD: CVE by Product *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "nvd_cve-by-product_";
+        String[]  table_header = new String[] {
+                        "Product",
+                        "CPE Category",
+                        "NVD/CVE (except Rejected)",
+                        "CVSS (avg.)",
+                        "CVE ID (except Rejected)"
+                        };
+
+        Map<String,Collection<VulnerabilitySummary>>  total_prod_vuln_map =
+                        new TreeMap<String,Collection<VulnerabilitySummary>>();
+        for (int  year = year_begin; year <= year_end; year++) {
+            Map<String,Collection<VulnerabilitySummary>>  prod_vuln_map =
+                            _nvd_analyzer.getVulnExceptRejectedByProductOfYear( year );
+            Table  year_table = _buildNvdCveByProductReport( table_header, prod_vuln_map );
+            _outputReport( year_table, filename_prefix + year );
+
+            _meargeProductVulnMapTo( prod_vuln_map, total_prod_vuln_map );
+        }
+
+        Table  total_table = _buildNvdCveByProductReport( table_header, total_prod_vuln_map );
+        _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    private Table _buildNvdCveByProductReport(
+                    final String[] header,
+                    final Map<String,Collection<VulnerabilitySummary>> prod_vuln_map
+                    )
+    {
+        Table  table = new Table( header );
+
+        for (String  product_name : prod_vuln_map.keySet()) {
+            Collection<VulnerabilitySummary>  vuln_list = prod_vuln_map.get( product_name );
+
+            Collection<String>  cve_list = new TreeSet<String>();
+            double  cvss_sum = 0.0;
+            for (VulnerabilitySummary  vuln : vuln_list) {
+                cvss_sum += vuln.cvss_base_score;
+                cve_list.add( vuln.cve );
+            }
+            double  cvss_avg = cvss_sum / vuln_list.size();
+
+            int  index = 0;
+            Object[]  values = new Object[table.columns() - 1]; //product_name contains category column
+            values[index++] = product_name;
+            values[index++] = cve_list.size();
+
+            /* CVSS, e.g. 9.3 */
+            Formatter  formatter = new Formatter();
+            formatter.format( "%.1f", cvss_avg );
+            values[index++] = formatter.out();
+            formatter.close();
+
+            values[index++] = cve_list;
+            table.addRow( values );
+        }
+
+        return table;
+    }
+
+
+    private void _meargeProductVulnMapTo(
+                    final Map<String,Collection<VulnerabilitySummary>> source_map,
+                    final Map<String,Collection<VulnerabilitySummary>> dest_map
+                    )
+    {
+        for (String  product_name : source_map.keySet()) {
+            Collection<VulnerabilitySummary>  vuln_list = source_map.get( product_name );
+
+            Collection<VulnerabilitySummary>  product_vuln_list = dest_map.get( product_name );
+            if (product_vuln_list == null) {
+                product_vuln_list = new TreeSet<VulnerabilitySummary>();
+                dest_map.put( product_name, product_vuln_list );
+            }
+
+            product_vuln_list.addAll( vuln_list );
+        }
+    }
+
 
 
     public static final String  CWE_UNKNOWN = "unknown";

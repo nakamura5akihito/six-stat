@@ -87,8 +87,8 @@ public class NvdAnalyzer
 
     /**
      * {Simple CPE name, Vulnerability list}
-     * product1, {Vuln list}
-     * product2, {Vuln list}
+     * vendor:product, part, {Vuln list}
+     * vendor:product, part, {Vuln list}
      * ...
      */
     public Map<String,Collection<VulnerabilitySummary>> getVulnExceptRejectedByProductOfYear(
@@ -193,7 +193,7 @@ public class NvdAnalyzer
 
 
     /**
-     * "cpe:/a:mozilla:firefox:3.5" --> "a,mozilla:firefox"
+     * "cpe:/a:mozilla:firefox:3.5" --> "mozilla:firefox,a"
      */
     private static final String _simpleCpeName(
                     final String cpe_name
