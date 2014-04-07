@@ -86,7 +86,7 @@ public class NvdAnalyzer
 
 
     /**
-     * {Simple CPE name, Vulnerability list}
+     * {Simple CPE name, CPE part A/O/H, Vulnerability list}
      * vendor:product, part, {Vuln list}
      * vendor:product, part, {Vuln list}
      * ...
@@ -108,7 +108,7 @@ public class NvdAnalyzer
 
             Collection<String>  vuln_cpe_list = vuln_product_list.getProduct();
             for (String  vuln_cpe : vuln_cpe_list) {
-                String  vuln_simple_cpe = _simpleCpeName( vuln_cpe );
+                String  vuln_simple_cpe = _toSimpleCpeName( vuln_cpe );
 
                 Collection<VulnerabilitySummary>  product_vuln_list = map.get( vuln_simple_cpe );
                 if (product_vuln_list == null) {
@@ -129,11 +129,21 @@ public class NvdAnalyzer
     {
         Map<String,String>  map = new HashMap<String,String>();
 
+        //Mac OS//
+        map.put( "apple:os_x_server", "apple:mac_os_x_server" );
+
+        //Mozilla//
+        map.put( "mozilla:firefox_esr", "mozilla:firefox" );
+        map.put( "mozilla:thunderbird_esr", "mozilla:thunderbird" );
+
+        //Microsoft//
         map.put( "microsoft:windows_2003_server", "microsoft:windows_server_2003" );
         map.put( "microsoft:internet_explorer", "microsoft:ie" );
 
+        //Adobe//
         map.put( "adobe:acrobat_reader", "adobe:adobe_reader" );
 
+        //Sun & Oracle//
         map.put( "sun:jdk",     "sun-oracle:jdk-jre" );
         map.put( "sun:jre",     "sun-oracle:jdk-jre" );
         map.put( "sun:java",    "sun-oracle:jdk-jre" );
@@ -142,11 +152,14 @@ public class NvdAnalyzer
         map.put( "oracle:jdk",  "sun-oracle:jdk-jre" );
         map.put( "oracle:jre",  "sun-oracle:jdk-jre" );
 
+        map.put( "sun:sunos",           "sun-oracle:sunos" );
+        map.put( "oracle:sunos",        "sun-oracle:sunos" );
         map.put( "sun:solaris",         "sun-oracle:solaris" );
         map.put( "oracle:solaris",      "sun-oracle:solaris" );
         map.put( "sun:opensolaris",     "sun-oracle:opensolaris" );
         map.put( "oracle:opensolaris",  "sun-oracle:opensolaris" );
 
+        //Red Hat//
         map.put( "red_hat:enterprise_linux",            "redhat:linux" );
         map.put( "red_hat:enterprise_linux_desktop",    "redhat:linux" );
         map.put( "red_hat:enterprise_linux_desktop_workstation",    "redhat:linux" );
@@ -181,7 +194,7 @@ public class NvdAnalyzer
 
     private static final Map<String,String>  _PRODUCT_ALIAS_NAME_MAP_ = _createProductAliasNameMapping();
 
-    private static final String _aliasName(
+    private static final String _toAliasProductName(
                     final String name
                     )
     {
@@ -193,14 +206,15 @@ public class NvdAnalyzer
 
 
     /**
-     * "cpe:/a:mozilla:firefox:3.5" --> "mozilla:firefox,a"
+     * Obtains a simple product name from the CPE name; vendor name, product name, and part name.
+     * e.g. "cpe:/a:mozilla:firefox:3.5" --> "mozilla:firefox,a"
      */
-    private static final String _simpleCpeName(
+    private static final String _toSimpleCpeName(
                     final String cpe_name
                     )
     {
         CpeName  cpe = new CpeName( cpe_name );
-        String  alias_name = _aliasName( cpe.getVendor() + ":" + cpe.getProduct() );
+        String  alias_name = _toAliasProductName( cpe.getVendor() + ":" + cpe.getProduct() );
 
         StringBuilder  s = new StringBuilder();
         s.append( alias_name );
