@@ -129,7 +129,10 @@ public class NvdAnalyzer
     {
         Map<String,String>  map = new HashMap<String,String>();
 
-        //Mac OS//
+        //Adobe//
+        map.put( "adobe:acrobat_reader", "adobe:adobe_reader" );
+
+        //Apple//
         map.put( "apple:os_x_server", "apple:mac_os_x_server" );
 
         //Mozilla//
@@ -140,10 +143,7 @@ public class NvdAnalyzer
         map.put( "microsoft:windows_2003_server", "microsoft:windows_server_2003" );
         map.put( "microsoft:internet_explorer", "microsoft:ie" );
 
-        //Adobe//
-        map.put( "adobe:acrobat_reader", "adobe:adobe_reader" );
-
-        //Sun & Oracle//
+        //Sun & Oracle, Java// TODO: OpenJDK
         map.put( "sun:jdk",     "sun-oracle:jdk-jre" );
         map.put( "sun:jre",     "sun-oracle:jdk-jre" );
         map.put( "sun:java",    "sun-oracle:jdk-jre" );
