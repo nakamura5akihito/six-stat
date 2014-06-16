@@ -15,8 +15,10 @@ public class NvdProductNameMappingTest
     @Test
     public void test()
     {
-        NvdProductMapping  mapper =
-                        new NvdProductMapping( "/test_nvd-simple-product-mapping.properties" );
+//        String  mapping_resource = "/test_nvd-simple-product-mapping.properties";
+        String  mapping_resource = "/nvd-simple-product-mapping.properties";
+
+        NvdProductMapping  mapper = new NvdProductMapping( mapping_resource );
 
         System.out.println( "===== NVD product name pamming =====" );
         Map<String,String>  map = mapper.getMapping();

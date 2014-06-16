@@ -51,8 +51,12 @@ public class NvdProductMapping
 
 
     /**
-     * cpe:/a:oracle:mysql:5.0 -> a:mysql-oracle:mysql
-     * cpe:/o:microsoft:windows -> o:microsoft:windows
+     * Returns the appropriate product name for the specified CPE name.
+     * The returned name is a simple name: except for the CPE schema part "cpe:/".
+     *
+     * Examples:
+     *   cpe:/a:oracle:mysql:5.0 -> a:mysql-oracle:mysql
+     *   cpe:/o:microsoft:windows -> o:microsoft:windows
      */
     public String toAppropriateSimpleName(
                     final CpeName cpe
@@ -71,6 +75,7 @@ public class NvdProductMapping
 
         return (appropriate_name == null ? simple_name : appropriate_name);
     }
+
 
 
     /**
@@ -110,13 +115,14 @@ public class NvdProductMapping
 
 
 
-
     /**
-     * alternative and appropriate names in a property file;
-     *   sun-oracle:j2se = sun:jdk,oracle:j2se,...
-     * are arranged in a Map;
-     *   <sun:jdk,     sun-oracle:j2se>
-     *   <oracle:j2se, sun-oracle:j2se>
+     * Builds the alternate-appropriate product name mapping from a resource file.
+     *
+     * The file content looks like a property file:
+     *   a:sun-oracle:j2se = a:sun:jdk,a:oracle:j2se,...
+     * The built Map contains key-values like:
+     *   <a:sun:jdk,     a:sun-oracle:j2se>
+     *   <a:oracle:j2se, a:sun-oracle:j2se>
      *   ...
      *
      * @param product_name_map_resource
@@ -143,6 +149,14 @@ public class NvdProductMapping
 
 
 
+    /**
+     * Reads the mapping information from the stream.
+     *
+     * @param input
+     * @return
+     *  unmodifiable Map; keys are the alternative names and values are the appropriate names.
+     * @throws IOException
+     */
     private Map<String,String> _readMapping(
                     final InputStream input
                     )
@@ -173,6 +187,13 @@ public class NvdProductMapping
 
             String[]  alternative_names = key_value[1].split( ",[ ¥t]*" );
             for (String  alternative_name : alternative_names) {
+                String  existing_appropriate_name = map.get( alternative_name );
+                if (existing_appropriate_name != null) {
+                    String  message = "duplicate alternative name mapping: "
+                                    + alternative_name + " -> " + existing_appropriate_name;
+                    _LOG_.error( message );
+                    throw new ConfigurationException( message );
+                }
                 map.put( alternative_name, appropriate_name );
             }
         }
