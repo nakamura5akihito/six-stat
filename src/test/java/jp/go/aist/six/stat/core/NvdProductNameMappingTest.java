@@ -27,10 +27,10 @@ public class NvdProductNameMappingTest
         }
 //        System.out.println( mapper.getMapping() );
 
-        String  simple_name = "a:mysql:mysql";
-        String  cpe_name = "cpe:/" + simple_name + ":5.0";
-        String  appropriate_name = mapper.toAppropriateSimpleName( cpe_name );
-        assertThat( appropriate_name, is( simple_name ) );
+        String  appropriate_name = "a:mysql-oracle:mysql";
+        String  cpe_name = "cpe:/" + appropriate_name + ":5.0";
+        String  mapped_appropriate_name = mapper.toAppropriateSimpleName( cpe_name );
+        assertThat( mapped_appropriate_name, is( appropriate_name ) );
     }
 
 }
