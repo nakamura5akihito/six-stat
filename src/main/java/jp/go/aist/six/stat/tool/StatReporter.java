@@ -44,12 +44,12 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
         reporter.reportNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );  //TODO: product name normalization
-        reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
     }
 
 
@@ -306,9 +306,9 @@ public class StatReporter
     /**
      * Number of NVD/CVE entries by Product, Yearly
      *
-     * {Product, #CVE,  AVG(CVSS), CVE ID}
-     * product1, count, avg_cvss, [CVE list]
-     * product2, count, avg_cvss, [CVE list]
+     * {Product, CPE Part, #CVE,   AVG(CVSS), CVE ID}
+     * product1, h/o/a,    count1, avg_cvss1, [CVE list 1]
+     * product2, h/o/a,    count2, avg_cvss2, [CVE list 2]
      * ...
      */
     public void reportNvdCveByProduct(
@@ -323,7 +323,7 @@ public class StatReporter
         final String  filename_prefix = "nvd_cve-by-product_";
         String[]  table_header = new String[] {
                         "Product",
-                        "CPE Category",
+                        "CPE Part",
                         "NVD/CVE (except Rejected)",
                         "CVSS (avg.)",
                         "CVE ID (except Rejected)"

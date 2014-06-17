@@ -1,16 +1,15 @@
 package jp.go.aist.six.stat.tool;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import jp.go.aist.six.stat.core.NvdProductMapping;
 import jp.go.aist.six.stat.model.Table;
 import jp.go.aist.six.stat.model.VulnerabilitySummary;
 import jp.go.aist.six.util.repository.QueryResults;
 import jp.go.aist.six.vuln.core.SixVulnContext;
-import jp.go.aist.six.vuln.model.scap.cpe.CpeName;
 import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerabilityType;
 import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerableSoftwareType;
 import jp.go.aist.six.vuln.repository.scap.nvd.NvdRepository;
@@ -86,9 +85,9 @@ public class NvdAnalyzer
 
 
     /**
-     * {Simple CPE name, CPE part A/O/H, Vulnerability list}
-     * vendor:product, part, {Vuln list}
-     * vendor:product, part, {Vuln list}
+     * {Simple CPE name, CPE part a/o/h, Vulnerability list}
+     * vendor:product, part, {NVD simplified entries}
+     * vendor:product, part, {NVD simplified entries}
      * ...
      */
     public Map<String,Collection<VulnerabilitySummary>> getVulnExceptRejectedByProductOfYear(
@@ -108,7 +107,8 @@ public class NvdAnalyzer
 
             Collection<String>  vuln_cpe_list = vuln_product_list.getProduct();
             for (String  vuln_cpe : vuln_cpe_list) {
-                String  vuln_simple_cpe = _toSimpleCpeName( vuln_cpe );
+                String  vuln_simple_cpe = _toSimpleCpeName_new( vuln_cpe );
+//                String  vuln_simple_cpe = _toSimpleCpeName( vuln_cpe );
 
                 Collection<VulnerabilitySummary>  product_vuln_list = map.get( vuln_simple_cpe );
                 if (product_vuln_list == null) {
@@ -125,104 +125,132 @@ public class NvdAnalyzer
 
 
 
-    private static final Map<String,String> _createProductAliasNameMapping()
-    {
-        Map<String,String>  map = new HashMap<String,String>();
-
-        //Adobe//
-        map.put( "adobe:acrobat_reader", "adobe:adobe_reader" );
-
-        //Apple//
-        map.put( "apple:os_x_server", "apple:mac_os_x_server" );
-
-        //Mozilla//
-        map.put( "mozilla:firefox_esr", "mozilla:firefox" );
-        map.put( "mozilla:thunderbird_esr", "mozilla:thunderbird" );
-
-        //Microsoft//
-        map.put( "microsoft:windows_2003_server", "microsoft:windows_server_2003" );
-        map.put( "microsoft:internet_explorer", "microsoft:ie" );
-
-        //Sun & Oracle, Java// TODO: OpenJDK
-        map.put( "sun:jdk",     "sun-oracle:jdk-jre" );
-        map.put( "sun:jre",     "sun-oracle:jdk-jre" );
-        map.put( "sun:java",    "sun-oracle:jdk-jre" );
-        map.put( "sun:java_se", "sun-oracle:jdk-jre" );
-        map.put( "sun:j2se",    "sun-oracle:jdk-jre" );
-        map.put( "oracle:jdk",  "sun-oracle:jdk-jre" );
-        map.put( "oracle:jre",  "sun-oracle:jdk-jre" );
-
-        map.put( "sun:sunos",           "sun-oracle:sunos" );
-        map.put( "oracle:sunos",        "sun-oracle:sunos" );
-        map.put( "sun:solaris",         "sun-oracle:solaris" );
-        map.put( "oracle:solaris",      "sun-oracle:solaris" );
-        map.put( "sun:opensolaris",     "sun-oracle:opensolaris" );
-        map.put( "oracle:opensolaris",  "sun-oracle:opensolaris" );
-
-        //Red Hat//
-        map.put( "red_hat:enterprise_linux",            "redhat:linux" );
-        map.put( "red_hat:enterprise_linux_desktop",    "redhat:linux" );
-        map.put( "red_hat:enterprise_linux_desktop_workstation",    "redhat:linux" );
-        map.put( "red_hat:enterprise_linux_kernel",     "redhat:linux" );
-        map.put( "red_hat:linux_kernel",                "redhat:linux" );
-        map.put( "red_hat:linux_kernel",                "redhat:linux" );
-
-        map.put( "redhat:desktop",                      "redhat:linux" );
-        map.put( "redhat:desktop_workstation",          "redhat:linux" );
-        map.put( "redhat:enterprise_linux",             "redhat:linux" );
-        map.put( "redhat:enterprise_linux_desktop",     "redhat:linux" );
-        map.put( "redhat:enterprise_linux_desktop_workstation",     "redhat:linux" );
-        map.put( "redhat:enterprise_linux_server",      "redhat:linux" );
-        map.put( "redhat:enterprise_linux_workstation", "redhat:linux" );
-        map.put( "redhat:linux_advanced_workstation",   "redhat:linux" );
-//        map.put( "redhat:kernel",             "redhat:linux" );
-
-
-        map.put( "opera:opera",                         "opera:opera_browser" );
-        map.put( "opera_software:opera",                "opera:opera_browser" );
-        map.put( "opera_software:opera_web_browser",    "opera:opera_browser" );
-
-        map.put( "mysql:mysql",         "mysql-oracle:mysql" );
-        map.put( "oracle:mysql",        "mysql-oracle:mysql" );
-
-//        map.put( "macromedia:flash_player",             "adobe:flash_player:" );
-
-        return map;
-    }
-
-
-
-    private static final Map<String,String>  _PRODUCT_ALIAS_NAME_MAP_ = _createProductAliasNameMapping();
-
-    private static final String _toAliasProductName(
-                    final String name
-                    )
-    {
-        String  alias_name = _PRODUCT_ALIAS_NAME_MAP_.get( name );
-
-        return (alias_name == null ? name : alias_name);
-    }
+//    private static final Map<String,String> _createProductAliasNameMapping()
+//    {
+//        Map<String,String>  map = new HashMap<String,String>();
+//
+//        //Adobe//
+//        map.put( "adobe:acrobat_reader", "adobe:adobe_reader" );
+//
+//        //Apple//
+//        map.put( "apple:os_x_server", "apple:mac_os_x_server" );
+//
+//        //Mozilla//
+//        map.put( "mozilla:firefox_esr", "mozilla:firefox" );
+//        map.put( "mozilla:thunderbird_esr", "mozilla:thunderbird" );
+//
+//        //Microsoft//
+//        map.put( "microsoft:windows_2003_server", "microsoft:windows_server_2003" );
+//        map.put( "microsoft:internet_explorer", "microsoft:ie" );
+//
+//        //Sun & Oracle, Java// TODO: OpenJDK
+//        map.put( "sun:jdk",     "sun-oracle:jdk-jre" );
+//        map.put( "sun:jre",     "sun-oracle:jdk-jre" );
+//        map.put( "sun:java",    "sun-oracle:jdk-jre" );
+//        map.put( "sun:java_se", "sun-oracle:jdk-jre" );
+//        map.put( "sun:j2se",    "sun-oracle:jdk-jre" );
+//        map.put( "oracle:jdk",  "sun-oracle:jdk-jre" );
+//        map.put( "oracle:jre",  "sun-oracle:jdk-jre" );
+//
+//        map.put( "sun:sunos",           "sun-oracle:sunos" );
+//        map.put( "oracle:sunos",        "sun-oracle:sunos" );
+//        map.put( "sun:solaris",         "sun-oracle:solaris" );
+//        map.put( "oracle:solaris",      "sun-oracle:solaris" );
+//        map.put( "sun:opensolaris",     "sun-oracle:opensolaris" );
+//        map.put( "oracle:opensolaris",  "sun-oracle:opensolaris" );
+//
+//        //Red Hat//
+//        map.put( "red_hat:enterprise_linux",            "redhat:linux" );
+//        map.put( "red_hat:enterprise_linux_desktop",    "redhat:linux" );
+//        map.put( "red_hat:enterprise_linux_desktop_workstation",    "redhat:linux" );
+//        map.put( "red_hat:enterprise_linux_kernel",     "redhat:linux" );
+//        map.put( "red_hat:linux_kernel",                "redhat:linux" );
+//        map.put( "red_hat:linux_kernel",                "redhat:linux" );
+//
+//        map.put( "redhat:desktop",                      "redhat:linux" );
+//        map.put( "redhat:desktop_workstation",          "redhat:linux" );
+//        map.put( "redhat:enterprise_linux",             "redhat:linux" );
+//        map.put( "redhat:enterprise_linux_desktop",     "redhat:linux" );
+//        map.put( "redhat:enterprise_linux_desktop_workstation",     "redhat:linux" );
+//        map.put( "redhat:enterprise_linux_server",      "redhat:linux" );
+//        map.put( "redhat:enterprise_linux_workstation", "redhat:linux" );
+//        map.put( "redhat:linux_advanced_workstation",   "redhat:linux" );
+////        map.put( "redhat:kernel",             "redhat:linux" );
+//
+//
+//        map.put( "opera:opera",                         "opera:opera_browser" );
+//        map.put( "opera_software:opera",                "opera:opera_browser" );
+//        map.put( "opera_software:opera_web_browser",    "opera:opera_browser" );
+//
+//        map.put( "mysql:mysql",         "mysql-oracle:mysql" );
+//        map.put( "oracle:mysql",        "mysql-oracle:mysql" );
+//
+////        map.put( "macromedia:flash_player",             "adobe:flash_player:" );
+//
+//        return map;
+//    }
 
 
+
+    //
+    // NEW implementation
+    //
+
+    private static final NvdProductMapping  _NVD_PRODUCT_NAME_MAPPING_ =
+                    new NvdProductMapping( "/nvd-simple-product-mapping.properties" );
 
     /**
      * Obtains a simple product name from the CPE name; vendor name, product name, and part name.
-     * e.g. "cpe:/a:mozilla:firefox:3.5" --> "mozilla:firefox,a"
+     * e.g. "cpe:/a:mysql:mysql:5.5" -> "a:oracle-mysql:mysql" -> "oracle-mysql:mysql,a"
      */
-    private static final String _toSimpleCpeName(
+    private static final String _toSimpleCpeName_new(
                     final String cpe_name
                     )
     {
-        CpeName  cpe = new CpeName( cpe_name );
-        String  alias_name = _toAliasProductName( cpe.getVendor() + ":" + cpe.getProduct() );
-
+        String  simple_name = _NVD_PRODUCT_NAME_MAPPING_.toAppropriateSimpleName( cpe_name );
         StringBuilder  s = new StringBuilder();
-        s.append( alias_name );
-        s.append( "," ).append( cpe.getPart() );
+        s.append( simple_name.substring( 2 ) ).append( ',' ).append( simple_name.charAt( 0 ) );
 
         return s.toString();
     }
 
+
+
+
+    //
+    // OLD implementation
+    //
+
+//    private static final Map<String,String>  _PRODUCT_ALIAS_NAME_MAP_ = _createProductAliasNameMapping();
+//
+//    private static final String _toAliasProductName(
+//                    final String name
+//                    )
+//    {
+//        String  alias_name = _PRODUCT_ALIAS_NAME_MAP_.get( name );
+//
+//        return (alias_name == null ? name : alias_name);
+//    }
+//
+//
+//
+//    /**
+//     * Obtains a simple product name from the CPE name; vendor name, product name, and part name.
+//     * e.g. "cpe:/a:mozilla:firefox:3.5" --> "mozilla:firefox,a"
+//     */
+//    private static final String _toSimpleCpeName(
+//                    final String cpe_name
+//                    )
+//    {
+//        CpeName  cpe = new CpeName( cpe_name );
+//        String  alias_name = _toAliasProductName( cpe.getVendor() + ":" + cpe.getProduct() );
+//
+//        StringBuilder  s = new StringBuilder();
+//        s.append( alias_name );
+//        s.append( "," ).append( cpe.getPart() );
+//
+//        return s.toString();
+//    }
 
 
 

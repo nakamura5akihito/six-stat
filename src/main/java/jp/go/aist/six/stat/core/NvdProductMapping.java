@@ -177,7 +177,7 @@ public class NvdProductMapping
                 continue;
             }
 
-            String[]  key_value = line.split( "[ ¥t]*=[ ¥t]*" );
+            String[]  key_value = line.split( "\\s*=\\s*" );
             if (key_value.length < 2) {
                 throw new ConfigurationException( "invalid product name mapping: " + line );
             }
@@ -185,7 +185,7 @@ public class NvdProductMapping
             _LOG_.debug( "appropriate name: " + appropriate_name );
             _LOG_.debug( "    alternative names: " + key_value[1] );
 
-            String[]  alternative_names = key_value[1].split( ",[ ¥t]*" );
+            String[]  alternative_names = key_value[1].split( ",\\s*" );
             for (String  alternative_name : alternative_names) {
                 String  existing_appropriate_name = map.get( alternative_name );
                 if (existing_appropriate_name != null) {
