@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import jp.go.aist.six.stat.core.NvdProductMapping;
 import jp.go.aist.six.stat.model.Table;
 import jp.go.aist.six.stat.model.VulnerabilitySummary;
 import jp.go.aist.six.util.repository.QueryResults;

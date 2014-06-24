@@ -3,6 +3,7 @@ package jp.go.aist.six.stat.core;
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.*;
 import java.util.Map;
+import jp.go.aist.six.stat.tool.NvdProductMapping;
 import org.junit.Test;
 
 

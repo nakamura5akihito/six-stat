@@ -1,4 +1,4 @@
-package jp.go.aist.six.stat.core;
+package jp.go.aist.six.stat.tool;
 
 import java.io.BufferedReader;
 import java.io.IOException;
