@@ -44,12 +44,12 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
-//        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
-//        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
-        reporter.reportNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );  //TODO: product name normalization
-//        reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
-//        reporter.reportOvalCoveredOfCve( PERIOD_BEGIN, PERIOD_END );
+//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
+//        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
+//        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );       //B.2
+//        reporter.reportNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );   //C.1
+        reporter.reportOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );    //D.1
+//      reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );   //D.2
     }
 
 
@@ -87,7 +87,7 @@ public class StatReporter
      * 2000, nvd-cve_count_2000, oval_count_2000, coverage_2000, [cve-list2]
      * ...
      */
-    public void reportOvalCoveredOfCve(
+    public void reportOvalCoverageOfCve(
                     final int year_begin,
                     final int year_end
                     )
