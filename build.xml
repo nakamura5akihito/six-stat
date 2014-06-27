@@ -45,20 +45,23 @@
     <!-- *  OVAL Data Installation                                    * -->
     <!-- ************************************************************** -->
 
-    <property name="oval.mitre.dir" value="/tmp/oval_mitre_20140331"/>
+    <property name="oval.mitre.dir" value="/tmp/oval_mitre_20140626"/>
     <target name="oval.mitre.install-all-files">
         <record name="build.log" loglevel="verbose" />
         <java
             classname="jp.go.aist.six.oval.core.repository.OvalDocumentInstaller"
             fork="true"
-            maxmemory="768m"
+            maxmemory="1024m"
             >
             <!-- If we shoose 512m maxmemory, it ends up with out-of-memory error. -->
-            <arg value="${oval.mitre.dir}/ios.xml"/>
-            <arg value="${oval.mitre.dir}/macos.xml"/>
-            <arg value="${oval.mitre.dir}/pixos.xml"/>
-            <arg value="${oval.mitre.dir}/unix.xml"/>
-            <arg value="${oval.mitre.dir}/windows.xml"/>
+            <arg value="${oval.mitre.dir}/ios_v.xml"/>
+            <arg value="${oval.mitre.dir}/macos_v.xml"/>
+            <arg value="${oval.mitre.dir}/pixos_v.xml"/>
+            <arg value="${oval.mitre.dir}/unix_v.xml"/>
+            <arg value="${oval.mitre.dir}/windows_v.xml"/>
+
+            <!-- If we shoose 768m maxmemory, it ends up with out-of-memory error. -->
+        	<arg value="${oval.mitre.dir}/unix_p.xml"/>
             <classpath>
                 <path refid="build.classpath"/>
                 <pathelement location="${maven.build.outputDir}"/>
@@ -68,7 +71,7 @@
         </java>
     </target>
 
-    <property name="oval.redhat.dir" value="/tmp/oval_redhat_20140331"/>
+    <property name="oval.redhat.dir" value="/tmp/oval_redhat_20140625"/>
     <target name="oval.redhat.install-all-files">
         <record name="build.log" loglevel="verbose" />
         <java
@@ -89,7 +92,7 @@
     <!-- ************************************************************** -->
     <!-- *  NVD XML Data Feed                                         * -->
     <!-- ************************************************************** -->
-    <property name="nvd.xmldatafeed.dir" value="/tmp/nvd_20140331"/>
+    <property name="nvd.xmldatafeed.dir" value="/tmp/NVD_20140626"/>
 
 	<target name="nvd.install-all-files">
         <record name="build.log" loglevel="verbose" />
@@ -122,7 +125,7 @@
     <!-- ************************************************************** -->
     <!-- *  CVE List                                                  * -->
     <!-- ************************************************************** -->
-    <property name="data.cve.dir" value="/tmp/cve_20140331"/>
+    <property name="data.cve.dir" value="/tmp/CVE_20140625"/>
 
 	<target name="cve.install-all-files">
         <record name="build.log" loglevel="verbose" />

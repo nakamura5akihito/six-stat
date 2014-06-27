@@ -10,9 +10,9 @@ import jp.go.aist.six.oval.model.definitions.DefinitionType;
 import jp.go.aist.six.oval.model.definitions.ReferenceType;
 import jp.go.aist.six.oval.repository.DefinitionQueryParams;
 import jp.go.aist.six.oval.repository.OvalRepository;
-import jp.go.aist.six.util.repository.QueryResults;
 import jp.go.aist.six.stat.model.OvalRepositoryProvider;
 import jp.go.aist.six.stat.model.Table;
+import jp.go.aist.six.util.repository.QueryResults;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -176,6 +176,26 @@ public class OvalAnalyzer
 
 
 
+    /**
+     * Counts the OVAL Definitions to assess the CVE vulnerabilities.
+     *
+     * @param year
+     * @param provider
+     * @return
+     *  the number of OVAL Definitions.
+     */
+    public int countCveAssessmentDefExceptDeprecatedByYear(
+                    final int year,
+                    final OvalRepositoryProvider provider
+                    )
+    throws Exception
+    {
+        DefinitionQueryParams  params = _createYearlyCveAssessmentDefQuery( year, provider );
+        QueryResults<String>  query_results = _getRepository().findDefinitionId( params );
+        return query_results.size();
+    }
+
+
 
 
     /**
@@ -216,6 +236,43 @@ public class OvalAnalyzer
 
         return report;
     }
+
+
+
+    ///////////////////////////////////////////////////////////////////////
+    //  query
+    ///////////////////////////////////////////////////////////////////////
+
+    /**
+     *
+     * @param cve_year  CVE-ID year, e.g. 2013 for CVE-2013-2465. 0 means all the years.
+     * @param def_clazzes OVAL Definition class; vulnerability, patch, etc. Null means all the classes.
+     * @param provider  Mitre, Red Hat, etc.
+     */
+    private DefinitionQueryParams _createYearlyCveAssessmentDefQuery(
+                    final int cve_year,
+                    final OvalRepositoryProvider provider
+                    )
+    throws Exception
+    {
+        if (provider == null) {
+            throw new NullPointerException( "Empty OVAL provider" );
+        }
+
+        DefinitionQueryParams  params = new DefinitionQueryParams();
+        params.setDeprecated( "!true" ); //remove "deprecated" definitions
+
+        if (cve_year != 0) {
+            params.setRefId( _createCveIdPrefix( cve_year ) + "*" );
+        }
+
+        params.setDefinitionClass( provider.ovalAssessmentClasses() );
+
+        params.setId( provider.ovalIdPattern() );
+
+        return params;
+    }
+
 
 
 

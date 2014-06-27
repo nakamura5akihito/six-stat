@@ -44,11 +44,11 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
+        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
 //        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
 //        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );       //B.2
 //        reporter.reportNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );   //C.1
-        reporter.reportOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );    //D.1
+//        reporter.reportOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );    //D.1
 //      reporter.reportOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );   //D.2
     }
 
@@ -673,16 +673,18 @@ public class StatReporter
         String[]  table_header = new String[] {
                         "Year",
                         "NVD/CVE (except Rejected)",
-                        "OVAL (Mitre V Def, except Deprected)",
-                        "OVAL (Red Hat P Def, except Deprecated)"
+                        "OVAL (Mitre V/P Def except Deprected)",
+                        "OVAL (Red Hat P Def except Deprecated)"
                         };
 
         //analysis//
         Table  table = new Table( table_header );
         for (int  year = year_begin; year <= year_end; year++) {
             long     cve_count =  _nvd_analyzer.countVulnExceptRejectedByCveYear( year );
-            long   mitre_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
-            long  redhat_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.REDHAT );
+            long   mitre_count = _oval_analyzer.countCveAssessmentDefExceptDeprecatedByYear( year, OvalRepositoryProvider.MITRE );
+            long  redhat_count = _oval_analyzer.countCveAssessmentDefExceptDeprecatedByYear( year, OvalRepositoryProvider.REDHAT );
+//            long   mitre_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
+//            long  redhat_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.REDHAT );
 
             table.addRow( new Object[] {
                             year,
