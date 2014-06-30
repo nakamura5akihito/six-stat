@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import jp.go.aist.six.oval.model.common.ClassEnumeration;
 import jp.go.aist.six.oval.model.common.FamilyEnumeration;
 import jp.go.aist.six.oval.model.definitions.AffectedType;
 import jp.go.aist.six.oval.model.definitions.DefinitionType;
@@ -44,7 +45,10 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
+//        reporter.statNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+        reporter.statNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
+
+//        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
 //        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
 //        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );       //B.2
 //        reporter.reportNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );   //C.1
@@ -71,6 +75,145 @@ public class StatReporter
         _nvd_analyzer = new NvdAnalyzer();
         _oval_analyzer = new OvalAnalyzer();
     }
+
+
+
+
+    /**
+     * NVD, OVAL: Number of Entries.
+     */
+    public void statNumberOfEntries(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** NVD and OVAL: Number of Entries *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "nvd-oval_entries_";
+        String[]  table_header = new String[] {
+                        "Year",
+                        "NVD/CVE",
+                        "OVAL (Mitre V+P Def)",
+                        "-OVAL (Mitre V Def)",
+                        "-OVAL (Mitre P Def)",
+                        "OVAL (Red Hat P Def)"
+                        };
+
+        //analysis//
+        Table  table = new Table( table_header );
+        for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
+            long       cve_count =  _nvd_analyzer.countVulnByCveYear( cve_year );
+            long   mitre_v_count = _oval_analyzer.countDefByYear( cve_year, ClassEnumeration.VULNERABILITY, OvalRepositoryProvider.MITRE );
+            long   mitre_p_count = _oval_analyzer.countDefByYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.MITRE );
+            long  redhat_p_count = _oval_analyzer.countDefByYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.REDHAT );
+
+            table.addRow( new Object[] {
+                            cve_year,
+                            cve_count,
+                            mitre_v_count + mitre_p_count,
+                            mitre_v_count,
+                            mitre_p_count,
+                            redhat_p_count
+            });
+        }
+
+        //output//
+        _outputReport( table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    /**
+     * NVD: CVE by CVSS score.
+     */
+    public void statNvdCveByCvss(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** NVD: CVE by CVSS score *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "nvd_cve-by-cvss_";
+        final String[]  table_header = new String[] {
+                        "Year",
+                        "High (7.0--10.0)",
+                        "Medium (4.0--6.9)",
+                        "Low (0.0--3.9)",
+                        "Unknown (CVSS N/A)",
+                        "NVD/CVE (H+M+L+U)"
+                        };
+
+        Table  table = new Table( table_header );
+        for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
+            int  count_low     = 0;
+            int  count_medium  = 0;
+            int  count_high    = 0;
+            int  count_unknown = 0;
+
+            List<VulnerabilityType>  vuln_list =  _nvd_analyzer.findVulnByCveYear( cve_year );
+            for (VulnerabilityType  vuln : vuln_list) {
+                Double  score = null;
+                CvssImpactType  cvss = vuln.getCvss();
+                if (cvss != null) {
+                    BaseMetricsType  base = cvss.getBaseMetrics();
+                    if (base != null) {
+                        score = base.getScore();
+                    }
+                }
+
+                if (score == null) {
+                    count_unknown++;
+                    _println( System.out, "CVSS N/A: " + vuln.getId() );
+                } else {
+                    if (score < 4.0f) {
+                        count_low++;
+                    } else if (score < 7.0f) {
+                        count_medium++;
+                    } else {
+                        count_high++;
+                    }
+                }
+            }
+
+            table.addRow( new Object[] {
+                            cve_year,
+                            count_low,
+                            count_medium,
+                            count_high,
+                            count_unknown,
+                            count_low + count_medium + count_high + count_unknown,
+                            });
+        }
+
+        //output//
+        _outputReport( table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    // OLD impl
+    ////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -655,48 +798,49 @@ public class StatReporter
 
 
 
-    /**
-     * Report:
-     * @param year_begin
-     * @param year_end
-     */
-    public void reportNumberOfEntries(
-                    final int year_begin,
-                    final int year_end
-                    )
-    throws Exception
-    {
-        String  title = "***** NVD and OVAL: Number of Entries *****";
-        _println( System.out, title );
-
-        final String  filename_prefix = "nvd-oval_entries_";
-        String[]  table_header = new String[] {
-                        "Year",
-                        "NVD/CVE (except Rejected)",
-                        "OVAL (Mitre V/P Def except Deprected)",
-                        "OVAL (Red Hat P Def except Deprecated)"
-                        };
-
-        //analysis//
-        Table  table = new Table( table_header );
-        for (int  year = year_begin; year <= year_end; year++) {
-            long     cve_count =  _nvd_analyzer.countVulnExceptRejectedByCveYear( year );
-            long   mitre_count = _oval_analyzer.countCveAssessmentDefExceptDeprecatedByYear( year, OvalRepositoryProvider.MITRE );
-            long  redhat_count = _oval_analyzer.countCveAssessmentDefExceptDeprecatedByYear( year, OvalRepositoryProvider.REDHAT );
-//            long   mitre_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
-//            long  redhat_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.REDHAT );
-
-            table.addRow( new Object[] {
-                            year,
-                            cve_count,
-                            mitre_count,
-                            redhat_count
-            });
-        }
-
-        //output//
-        _outputReport( table, filename_prefix + year_begin + "-" + year_end );
-    }
+//DEPRECATED:
+//    /**
+//     * Report:
+//     * @param year_begin
+//     * @param year_end
+//     */
+//    public void reportNumberOfEntries(
+//                    final int year_begin,
+//                    final int year_end
+//                    )
+//    throws Exception
+//    {
+//        String  title = "***** NVD and OVAL: Number of Entries *****";
+//        _println( System.out, title );
+//
+//        final String  filename_prefix = "nvd-oval_entries_";
+//        String[]  table_header = new String[] {
+//                        "Year",
+//                        "NVD/CVE (except Rejected)",
+//                        "OVAL (Mitre V/P Def except Deprected)",
+//                        "OVAL (Red Hat P Def except Deprecated)"
+//                        };
+//
+//        //analysis//
+//        Table  table = new Table( table_header );
+//        for (int  year = year_begin; year <= year_end; year++) {
+//            long     cve_count =  _nvd_analyzer.countVulnExceptRejectedByCveYear( year );
+//            long   mitre_count = _oval_analyzer.countCveAssessmentDefExceptDeprecatedByYear( year, OvalRepositoryProvider.MITRE );
+//            long  redhat_count = _oval_analyzer.countCveAssessmentDefExceptDeprecatedByYear( year, OvalRepositoryProvider.REDHAT );
+////            long   mitre_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
+////            long  redhat_count = _oval_analyzer.countOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.REDHAT );
+//
+//            table.addRow( new Object[] {
+//                            year,
+//                            cve_count,
+//                            mitre_count,
+//                            redhat_count
+//            });
+//        }
+//
+//        //output//
+//        _outputReport( table, filename_prefix + year_begin + "-" + year_end );
+//    }
 
 
     ////////////////////////////////////////////////////////////////////////////

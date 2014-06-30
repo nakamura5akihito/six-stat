@@ -59,6 +59,70 @@ public class OvalAnalyzer
 
 
 
+
+    /**
+     * Counts the OVAL Definitions.
+     *
+     * @param cve_year
+     *  e.g. 2013
+     * @param def_clazz
+     *  vulnerability, patch, invertory, etc.
+     *  If the clazz is null, then count all the definitions.
+     * @param def_provider
+     *  Mitre, Red Hat, etc.
+     */
+    public int countDefByYear(
+                    final int cve_year,
+                    final ClassEnumeration def_clazz,
+                    final OvalRepositoryProvider def_provider
+                    )
+    throws Exception
+    {
+        DefinitionQueryParams  params = _createCveYearlyDefQuery( cve_year, def_clazz, def_provider );
+        QueryResults<String>  query_results = _getRepository().findDefinitionId( params );
+        return query_results.size();
+    }
+
+
+
+    /**
+     * QUERY:
+     */
+    private DefinitionQueryParams _createCveYearlyDefQuery(
+                    final int cve_year,
+                    final ClassEnumeration def_clazz,
+                    final OvalRepositoryProvider def_provider
+                    )
+    throws Exception
+    {
+        if (def_provider == null) {
+            throw new NullPointerException( "Empty OVAL provider" );
+        }
+
+        DefinitionQueryParams  params = new DefinitionQueryParams();
+        params.setDeprecated( "!true" ); //remove "deprecated" definitions
+
+        if (cve_year != 0) {
+            params.setRefId( _createCveIdPrefix( cve_year ) + "*" );
+        }
+
+        if (def_clazz != null) {
+            params.setDefinitionClass( def_clazz );
+        }
+
+        params.setId( def_provider.ovalIdPattern() );
+
+        return params;
+    }
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    //  OLD impl
+    ////////////////////////////////////////////////////////////////////////////
+
+
     /**
      * 2012 --> {CVE-2012-0001, CVE-2012-0002, ...}
      */
@@ -175,25 +239,25 @@ public class OvalAnalyzer
     }
 
 
-
-    /**
-     * Counts the OVAL Definitions to assess the CVE vulnerabilities.
-     *
-     * @param year
-     * @param provider
-     * @return
-     *  the number of OVAL Definitions.
-     */
-    public int countCveAssessmentDefExceptDeprecatedByYear(
-                    final int year,
-                    final OvalRepositoryProvider provider
-                    )
-    throws Exception
-    {
-        DefinitionQueryParams  params = _createYearlyCveAssessmentDefQuery( year, provider );
-        QueryResults<String>  query_results = _getRepository().findDefinitionId( params );
-        return query_results.size();
-    }
+//DEPRECATED:
+//  /**
+//   * Counts the OVAL Definitions to assess the CVE vulnerabilities.
+//   *
+//   * @param year
+//   * @param provider
+//   * @return
+//   *  the number of OVAL Definitions.
+//   */
+//  public int countCveAssessmentDefExceptDeprecatedByYear(
+//                  final int year,
+//                  final OvalRepositoryProvider provider
+//                  )
+//  throws Exception
+//  {
+//      DefinitionQueryParams  params = _createYearlyCveAssessmentDefQuery( year, provider );
+//      QueryResults<String>  query_results = _getRepository().findDefinitionId( params );
+//      return query_results.size();
+//  }
 
 
 
@@ -243,35 +307,36 @@ public class OvalAnalyzer
     //  query
     ///////////////////////////////////////////////////////////////////////
 
-    /**
-     *
-     * @param cve_year  CVE-ID year, e.g. 2013 for CVE-2013-2465. 0 means all the years.
-     * @param def_clazzes OVAL Definition class; vulnerability, patch, etc. Null means all the classes.
-     * @param provider  Mitre, Red Hat, etc.
-     */
-    private DefinitionQueryParams _createYearlyCveAssessmentDefQuery(
-                    final int cve_year,
-                    final OvalRepositoryProvider provider
-                    )
-    throws Exception
-    {
-        if (provider == null) {
-            throw new NullPointerException( "Empty OVAL provider" );
-        }
-
-        DefinitionQueryParams  params = new DefinitionQueryParams();
-        params.setDeprecated( "!true" ); //remove "deprecated" definitions
-
-        if (cve_year != 0) {
-            params.setRefId( _createCveIdPrefix( cve_year ) + "*" );
-        }
-
-        params.setDefinitionClass( provider.ovalAssessmentClasses() );
-
-        params.setId( provider.ovalIdPattern() );
-
-        return params;
-    }
+//DEPRECATED:
+//    /**
+//     *
+//     * @param cve_year  CVE-ID year, e.g. 2013 for CVE-2013-2465. 0 means all the years.
+//     * @param def_clazzes OVAL Definition class; vulnerability, patch, etc. Null means all the classes.
+//     * @param provider  Mitre, Red Hat, etc.
+//     */
+//    private DefinitionQueryParams _createYearlyCveAssessmentDefQuery(
+//                    final int cve_year,
+//                    final OvalRepositoryProvider provider
+//                    )
+//    throws Exception
+//    {
+//        if (provider == null) {
+//            throw new NullPointerException( "Empty OVAL provider" );
+//        }
+//
+//        DefinitionQueryParams  params = new DefinitionQueryParams();
+//        params.setDeprecated( "!true" ); //remove "deprecated" definitions
+//
+//        if (cve_year != 0) {
+//            params.setRefId( _createCveIdPrefix( cve_year ) + "*" );
+//        }
+//
+//        params.setDefinitionClass( provider.ovalAssessmentClasses() );
+//
+//        params.setId( provider.ovalIdPattern() );
+//
+//        return params;
+//    }
 
 
 

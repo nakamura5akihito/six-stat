@@ -50,6 +50,116 @@ public class NvdAnalyzer
 
 
 
+    ////////////////////////////////////////////////////////////////////////////
+    //  NEW impl.
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * {CPE name, [Vulnerability list]}
+     */
+    public Map<String,Collection<VulnerabilitySummary>> getProduct2VulnMappingByYear(
+                    final int cve_year
+                    )
+    throws Exception
+    {
+        Collection<VulnerabilityType>  vuln_list = findVulnByCveYear( cve_year );
+
+        Map<String,Collection<VulnerabilitySummary>>  map = new TreeMap<String,Collection<VulnerabilitySummary>>();
+        for (VulnerabilityType  vuln : vuln_list) {
+            VulnerableSoftwareType  vuln_product_list = vuln.getVulnerableSoftwareList();
+            if (vuln_product_list == null) {
+                continue;
+            }
+
+            Collection<String>  vuln_cpe_list = vuln_product_list.getProduct();
+            for (String  vuln_cpe : vuln_cpe_list) {
+                String  vuln_simple_cpe = _toSimpleCpeName_new( vuln_cpe );
+//                String  vuln_simple_cpe = _toSimpleCpeName( vuln_cpe );
+
+                Collection<VulnerabilitySummary>  product_vuln_list = map.get( vuln_simple_cpe );
+                if (product_vuln_list == null) {
+                    product_vuln_list = new TreeSet<VulnerabilitySummary>();
+                    map.put( vuln_simple_cpe, product_vuln_list );
+                }
+
+                product_vuln_list.add( new VulnerabilitySummary( vuln ) );
+            }
+        }
+
+        return map;
+    }
+
+
+    /**
+     * Finds all the entries in the specified CVE year.
+     * Rejected entries are NOT counted.
+     *
+     * @param cve_year
+     * @return
+     */
+    public List<VulnerabilityType> findVulnByCveYear(
+                    final int cve_year
+                    )
+    throws Exception
+    {
+        QueryResults<VulnerabilityType>  query_results =
+                        _getRepository().findVulnerability( _createCveYearlyQuery( cve_year ) );
+        List<VulnerabilityType>  list = query_results.getElements();
+
+        return list;
+    }
+
+
+
+    /**
+     * Counts the number of NVD/CVE entries in the specified CVE year.
+     * Rejected entries are NOT counted.
+     */
+    public long countVulnByCveYear(
+                    final int cve_year
+                    )
+    throws Exception
+    {
+        long  count = _getRepository().countVulnerability( _createCveYearlyQuery( cve_year ) );
+        return count;
+    }
+
+
+
+    // Every REJECTed entry's summary starts with "** REJECT **  DO NOT USE THIS CANDIDATE NUMBER.".
+    public static final String  EXCEPT_REJECTED_PATTERN = "!\\*\\* REJECT \\*\\*";
+
+
+    /**
+     * WHERE cve_id LIKE "CVE-$year-%" AND NOT(summary LIKE "** REJECT ** %").
+     *
+     * @param year
+     * @return
+     */
+    private VulnerabilityQueryParams _createCveYearlyQuery(
+                    final int year
+                    )
+    throws Exception
+    {
+        String  cve_pattern = "CVE-" + year + "-*";
+        VulnerabilityQueryParams  params = new VulnerabilityQueryParams();
+        params.setId( cve_pattern );
+        params.setSummary( EXCEPT_REJECTED_PATTERN );
+
+        return params;
+    }
+
+
+
+
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    // OLD impl.
+    ////////////////////////////////////////////////////////////////////////////
+
     /**
      * Number of Entries (yearly)
      *
@@ -288,19 +398,19 @@ public class NvdAnalyzer
     }
 
 
-    /**
-     */
-    public List<VulnerabilityType> findVulnIncludingRejectedByCveYear(
-                    final int year
-                    )
-    throws Exception
-    {
-        QueryResults<VulnerabilityType>  query_results =
-                        _getRepository().findVulnerability( createCveYearIncludingRejectedQuery( year ) );
-        List<VulnerabilityType>  list = query_results.getElements();
-
-        return list;
-    }
+//    /**
+//     */
+//    public List<VulnerabilityType> findVulnIncludingRejectedByCveYear(
+//                    final int year
+//                    )
+//    throws Exception
+//    {
+//        QueryResults<VulnerabilityType>  query_results =
+//                        _getRepository().findVulnerability( createCveYearIncludingRejectedQuery( year ) );
+//        List<VulnerabilityType>  list = query_results.getElements();
+//
+//        return list;
+//    }
 
 
     public List<VulnerabilityType> findVulnExceptRejectedByCveYear(
@@ -335,11 +445,6 @@ public class NvdAnalyzer
         return params;
     }
 
-
-    /**
-     * The REJECTed entry's summary starts with "** REJECT **  DO NOT USE THIS CANDIDATE NUMBER.".
-     */
-    public static final String  EXCEPT_REJECTED_PATTERN = "!\\*\\* REJECT \\*\\*";
 
     public VulnerabilityQueryParams createCveYearExceptRejectedQuery(
                     final int year
