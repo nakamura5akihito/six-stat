@@ -49,7 +49,8 @@ public class StatReporter
 //        reporter.statNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
 //        reporter.statNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
 //        reporter.statNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
-        reporter.statNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );
+//        reporter.statNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );
+        reporter.statOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );
 
 //        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
 //        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
@@ -72,12 +73,45 @@ public class StatReporter
     /**
      */
     public StatReporter()
+    throws Exception
     {
         _output_dir = _mkOutputDirs();
 
         _nvd_analyzer = new NvdAnalyzer();
         _oval_analyzer = new OvalAnalyzer();
+
+        getNumberOfNvdCveEntries( PERIOD_BEGIN, PERIOD_END );
     }
+
+
+
+    private final Map<Integer,Long>  _number_of_nvdcve_entries = new HashMap<Integer,Long>();
+
+
+    /**
+     * Number of NVD/CVE Entries.
+     *
+     * 1999, 1234
+     * 2000, 5678
+     * ...
+     */
+    public Map<Integer,Long> getNumberOfNvdCveEntries(
+                    final int  year_begin,
+                    final int  year_end
+                    )
+    throws Exception
+    {
+        for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
+            if (! _number_of_nvdcve_entries.containsKey( cve_year )) {
+                long  count =  _nvd_analyzer.countVulnByCveYear( cve_year );
+                _number_of_nvdcve_entries.put( cve_year, count );
+            }
+        }
+
+        return _number_of_nvdcve_entries;
+    }
+
+
 
 
 
@@ -104,13 +138,15 @@ public class StatReporter
                         "OVAL (Red Hat P Def)"
                         };
 
-        //analysis//
+        Map<Integer,Long>  cve_counts = getNumberOfNvdCveEntries( year_begin, year_end );
+
         Table  table = new Table( table_header );
         for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
-            long       cve_count =  _nvd_analyzer.countVulnByCveYear( cve_year );
-            long   mitre_v_count = _oval_analyzer.countDefByYear( cve_year, ClassEnumeration.VULNERABILITY, OvalRepositoryProvider.MITRE );
-            long   mitre_p_count = _oval_analyzer.countDefByYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.MITRE );
-            long  redhat_p_count = _oval_analyzer.countDefByYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.REDHAT );
+            long       cve_count =  cve_counts.get( cve_year );
+//            long       cve_count =  _nvd_analyzer.countVulnByCveYear( cve_year );
+            long   mitre_v_count = _oval_analyzer.countDefByCveYear( cve_year, ClassEnumeration.VULNERABILITY, OvalRepositoryProvider.MITRE );
+            long   mitre_p_count = _oval_analyzer.countDefByCveYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.MITRE );
+            long  redhat_p_count = _oval_analyzer.countDefByCveYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.REDHAT );
 
             table.addRow( new Object[] {
                             cve_year,
@@ -238,7 +274,6 @@ public class StatReporter
         //<CWE,{CVE}>
 
 
-        /* analysis */
         Map<Integer,Map<String,Collection<String>>>  historical_cwe2cve_map = new TreeMap<Integer,Map<String,Collection<String>>>();
         //<year,Map<CWE,{CVE}>>
 
@@ -532,7 +567,115 @@ public class StatReporter
 
 
 
+    /**
+     * OVAL: Coverage of CVE
+     */
+    public void statOvalCoverageOfCve(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** OVAL: Coverage of CVE *****";
+        _println( System.out, title );
 
+        final String  filename_prefix = "oval_coverage-of-cve_";
+        String[]  stat_table_header = new String[] {
+                        "Year",
+                        "NVD/CVE",
+                        "OVAL/CVE (Mitre V+P)",
+                        "-OVAL/CVE (Mitre V)",
+                        "-OVAL/CVE (Mitre P)",
+                        "Coverage"
+                        };
+        Table  stat_table = new Table( stat_table_header );
+
+        String[]  id_table_header = new String[] {
+                        "NVD/CVE-ID",
+                        "OVAL-IDs"
+                        };
+
+        //<year, #NVD/CVE>
+        Map<Integer,Long>  nvd_cve_counts = getNumberOfNvdCveEntries( year_begin, year_end );
+
+        for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
+            //class=VULNERABILITY
+            Map<String,Set<String>>  cve2oval_mapping_v =
+                            _oval_analyzer.getCve2DefMappingByCveYear( cve_year, ClassEnumeration.VULNERABILITY, OvalRepositoryProvider.MITRE );
+            Table  id_table_v = _buildCve2OvalMapping( id_table_header, cve2oval_mapping_v );
+            _outputReport( id_table_v, filename_prefix + cve_year + "-mitre-v" );
+
+            //class=PATCH
+            Map<String,Set<String>>  cve2oval_mapping_p =
+                            _oval_analyzer.getCve2DefMappingByCveYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.MITRE );
+            Table  id_table_p = _buildCve2OvalMapping( id_table_header, cve2oval_mapping_p );
+            _outputReport( id_table_p, filename_prefix + cve_year + "-mitre-p" );
+
+            Map<String,Set<String>>  cve2oval_mapping_vp = _mergeCve2OvalMappings( cve2oval_mapping_v, cve2oval_mapping_p );
+            Table  id_table_vp = _buildCve2OvalMapping( id_table_header, cve2oval_mapping_vp );
+            _outputReport( id_table_vp, filename_prefix + cve_year + "-mitre" );
+
+            long  nvd_cve_count = nvd_cve_counts.get( cve_year );
+            int  oval_cve_count = cve2oval_mapping_vp.size();
+            Formatter  formatter = new Formatter();
+            formatter.format( "%.3f", ((float)oval_cve_count / (float)nvd_cve_count) );
+            stat_table.addRow( new Object[] {
+                            cve_year,
+                            nvd_cve_count,
+                            oval_cve_count,
+                            cve2oval_mapping_v.size(),
+                            cve2oval_mapping_p.size(),
+                            formatter.out()
+            });
+
+            formatter.close();
+        }
+
+        //output//
+        _outputReport( stat_table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    private Map<String,Set<String>> _mergeCve2OvalMappings(
+                    final Map<String,Set<String>> map1,
+                    final Map<String,Set<String>> map2
+                    )
+    {
+        Map<String,Set<String>>  map = new TreeMap<String,Set<String>>( map1 );
+
+        for (String  cve_id : map2.keySet()) {
+            Set<String>  oval_ids = map.get( cve_id );
+            Set<String>  oval_ids_2 = map2.get( cve_id );
+            if (oval_ids == null) {
+                oval_ids = oval_ids_2;
+            } else {
+                oval_ids = new TreeSet<String>( oval_ids );
+                oval_ids.addAll( oval_ids_2 );
+            }
+            map.put( cve_id, oval_ids );
+        }
+
+        return map;
+    }
+
+
+
+    private Table _buildCve2OvalMapping(
+                    final String[] header,
+                    final Map<String,Set<String>> map
+                    )
+    {
+        Table  table = new Table( header );
+        for (String  oval_id : map.keySet()) {
+             table.addRow( new Object[] {
+                             oval_id,
+                             map.get( oval_id )
+                             } );
+        }
+
+        return table;
+    }
 
 
 

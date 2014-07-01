@@ -1,8 +1,11 @@
 package jp.go.aist.six.stat.tool;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import jp.go.aist.six.oval.core.SixOvalContext;
 import jp.go.aist.six.oval.model.common.ClassEnumeration;
@@ -71,14 +74,14 @@ public class OvalAnalyzer
      * @param def_provider
      *  Mitre, Red Hat, etc.
      */
-    public int countDefByYear(
+    public int countDefByCveYear(
                     final int cve_year,
                     final ClassEnumeration def_clazz,
                     final OvalRepositoryProvider def_provider
                     )
     throws Exception
     {
-        DefinitionQueryParams  params = _createCveYearlyDefQuery( cve_year, def_clazz, def_provider );
+        DefinitionQueryParams  params = _createDefByCveYearQuery( cve_year, def_clazz, def_provider );
         QueryResults<String>  query_results = _getRepository().findDefinitionId( params );
         return query_results.size();
     }
@@ -88,7 +91,7 @@ public class OvalAnalyzer
     /**
      * QUERY:
      */
-    private DefinitionQueryParams _createCveYearlyDefQuery(
+    private DefinitionQueryParams _createDefByCveYearQuery(
                     final int cve_year,
                     final ClassEnumeration def_clazz,
                     final OvalRepositoryProvider def_provider
@@ -114,6 +117,119 @@ public class OvalAnalyzer
 
         return params;
     }
+
+
+
+    /**
+     *
+     * @param cve_year
+     * @param def_clazz
+     * @param def_provider
+     */
+    public List<DefinitionType> findDefByCveYear(
+                    final int cve_year,
+                    final ClassEnumeration def_clazz,
+                    final OvalRepositoryProvider def_provider
+                    )
+    throws Exception
+    {
+        DefinitionQueryParams  params = _createDefByCveYearQuery( cve_year, def_clazz, def_provider );
+        QueryResults<DefinitionType>  query_results = _getRepository().findDefinition( params );
+        List<DefinitionType>  def_list = query_results.getElements();
+
+        return def_list;
+    }
+
+
+
+
+    /**
+     * {CVE-ID, [OVAL-IDs]}
+     */
+    public Map<String,Set<String>> getCve2DefMappingByCveYear(
+                    final int cve_year,
+                    final ClassEnumeration def_clazz,
+                    final OvalRepositoryProvider def_provider
+                    )
+    throws Exception
+    {
+        List<DefinitionType>  def_list = findDefByCveYear( cve_year, def_clazz, def_provider );
+        final String  cve_prefix = _createCveIdPrefix( cve_year );  // e.g. "CVE-2013-"
+
+        //<CVE-ID, [OVAL-IDs]>
+        Map<String,Set<String>>  map = new TreeMap<String,Set<String>>();
+        for (DefinitionType  def : def_list ) {
+            String  oval_id = def.getOvalId();
+            Collection<ReferenceType>  ref_list = def.getMetadata().getReference();
+            if (ref_list == null) {
+                //INTERNAL ERROR!
+                throw new RuntimeException( "INTERNAL ERROR: NO reference in OVAL Def.: ID=" + oval_id );
+            }
+
+            for (ReferenceType  ref : ref_list) {
+                if ("CVE".equals( ref.getSource() )) {
+                    String  cve_id = ref.getRefId();
+                    if (cve_id.startsWith( cve_prefix )) {
+                        Set<String>  oval_ids = map.get( cve_id );
+                        if (oval_ids == null) {
+                            oval_ids = new TreeSet<String>();
+                            map.put( cve_id, oval_ids );
+                        }
+                        oval_ids.add( oval_id );
+                    }
+                }
+            }
+        }
+
+        return map;
+    }
+
+
+
+
+    /**
+     * {OVAL-ID, [CVE-IDs]}
+     */
+    public Map<String,Set<String>> getDef2CveMappingByCveYear(
+                    final int cve_year,
+                    final ClassEnumeration def_clazz,
+                    final OvalRepositoryProvider def_provider
+                    )
+    throws Exception
+    {
+        List<DefinitionType>  def_list = findDefByCveYear( cve_year, def_clazz, def_provider );
+        final String  cve_prefix = _createCveIdPrefix( cve_year );  // e.g. "CVE-2013-"
+
+        //<OVAL-ID, {CVE-IDs}>
+        Map<String,Set<String>>  map = new HashMap<String,Set<String>>();
+        for (DefinitionType  def : def_list ) {
+            Set<String>  cve_ids = new TreeSet<String>();
+            Collection<ReferenceType>  ref_list = def.getMetadata().getReference();
+            if (ref_list != null) {
+                for (ReferenceType  ref : ref_list) {
+                    if ("CVE".equals( ref.getSource() )) {
+                        String  cve_id = ref.getRefId();
+                        if (cve_id.startsWith( cve_prefix )) {
+                            cve_ids.add( cve_id );
+                        }
+                    }
+                }
+            }
+
+            if (cve_ids.size() == 0) {
+                _LOG_.error( "INTERNAL ERROR: OVAL Def has NO appropriate CVE Ref: OVAL ID="
+                                + def.getOvalId() + ", CVE year=" + cve_year );
+            }
+            map.put( def.getOvalId(), cve_ids );
+
+        }
+
+        return map;
+    }
+
+
+
+
 
 
 
