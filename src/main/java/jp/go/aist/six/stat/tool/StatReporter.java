@@ -19,6 +19,7 @@ import jp.go.aist.six.oval.model.common.ClassEnumeration;
 import jp.go.aist.six.oval.model.common.FamilyEnumeration;
 import jp.go.aist.six.oval.model.definitions.AffectedType;
 import jp.go.aist.six.oval.model.definitions.DefinitionType;
+import jp.go.aist.six.oval.model.definitions.Product;
 import jp.go.aist.six.oval.model.definitions.ReferenceType;
 import jp.go.aist.six.stat.model.OvalRepositoryProvider;
 import jp.go.aist.six.stat.model.Table;
@@ -61,7 +62,8 @@ public class StatReporter
 //        reporter.statNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
 //        reporter.statNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );
 //        reporter.statOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );
-        reporter.statOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
+//        reporter.statOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
+        reporter.statOvalCoverageOfCveByProduct( PERIOD_BEGIN, PERIOD_END );
 
 //        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
 //        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
@@ -735,8 +737,8 @@ public class StatReporter
                             }, yearly_family2cveid_mapping_v );
             _outputReport( family2cveid_table_v, filename_prefix + cve_year + "-mitre-v-cve" );
 
-            _meargeMapping( yearly_family2ovalid_mapping_v, total_family2ovalid_mapping );
-            _meargeMapping( yearly_family2cveid_mapping_v,  total_family2cveid_mapping  );
+            _mergeMapping( yearly_family2ovalid_mapping_v, total_family2ovalid_mapping );
+            _mergeMapping( yearly_family2cveid_mapping_v,  total_family2cveid_mapping  );
 
             //class=PATCH
             Map<String,Set<DefinitionType>>  family2def_mapping_p =
@@ -752,13 +754,13 @@ public class StatReporter
             _outputReport( family2ovalid_table_p, filename_prefix + cve_year + "-mitre-p-oval" );
             Table  family2cveid_table_p = _buildFamily2IdTable( new String[] {
                             "OS-Family",
-                            "#CVE (Mitre P)",
+                            "#Unique-CVE (Mitre P)",
                             "CVE-ID (Mitre P)"
                             }, yearly_family2cveid_mapping_p );
             _outputReport( family2cveid_table_p, filename_prefix + cve_year + "-mitre-p-cve" );
 
-            _meargeMapping( yearly_family2ovalid_mapping_p, total_family2ovalid_mapping );
-            _meargeMapping( yearly_family2cveid_mapping_p,  total_family2cveid_mapping  );
+            _mergeMapping( yearly_family2ovalid_mapping_p, total_family2ovalid_mapping );
+            _mergeMapping( yearly_family2cveid_mapping_p,  total_family2cveid_mapping  );
 
 
 //            historical_family2ovalid_mapping.put( cve_year, yearly_family2ovalid_mapping );
@@ -769,7 +771,7 @@ public class StatReporter
                         new String[] {
                                         "Family",
                                         "#OVAL-Def (Mitre V+P)",
-                                        "#CVE-Covered"
+                                        "#Unique-CVE"
                         },
                         total_family2ovalid_mapping, total_family2cveid_mapping );
         _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
@@ -798,7 +800,7 @@ public class StatReporter
 
 
 
-    private void _meargeMapping(
+    private void _mergeMapping(
                     final Map<String,Set<String>> from_map,
                     final Map<String,Set<String>> to_map
                     )
@@ -901,12 +903,309 @@ public class StatReporter
 
 
 
+    /**
+     * OVAL: Coverage of CVE by Product.
+     */
+    public void statOvalCoverageOfCveByProduct(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** OVAL: Coverage of CVE by Product *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "oval_coverage-of-cve-by-product_";
+
+        Map<String,Set<String>>  total_map = new TreeMap<String,Set<String>>();
+
+        for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
+            //class=VULNERABILITY
+            Collection<DefinitionType>  def_v_list =
+                            _oval_analyzer.findDefByCveYear( cve_year, ClassEnumeration.VULNERABILITY, OvalRepositoryProvider.MITRE );
+            Map<String,Set<String>>  yearly_v_map = _buildOvalProduct2CveMapping( def_v_list, cve_year );
+            Table  product2cveid_v_table = _buildOvalProduct2CveIdTable( new String[] {
+                            "OVAL-Product",
+                            "#CVE (Mitre V)",
+                            "CVE-ID (Mitre V)"
+                            }, yearly_v_map );
+            _outputReport( product2cveid_v_table, filename_prefix + cve_year + "-mitre-v" );
+            _mergeMapping( yearly_v_map, total_map );
+
+            //class=PATCH
+            Collection<DefinitionType>  def_p_list =
+                            _oval_analyzer.findDefByCveYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.MITRE );
+            Map<String,Set<String>>  yearly_p_map = _buildOvalProduct2CveMapping( def_p_list, cve_year );
+            Table  product2cveid_p_table = _buildOvalProduct2CveIdTable( new String[] {
+                            "OVAL-Product",
+                            "#CVE (Mitre P)",
+                            "CVE-ID (Mitre P)"
+                            }, yearly_p_map );
+            _outputReport( product2cveid_p_table, filename_prefix + cve_year + "-mitre-p" );
+            _mergeMapping( yearly_p_map, total_map );
+        }
+
+        Table  product2cveid_table = _buildOvalProduct2CveIdTable( new String[] {
+                        "OVAL-Product",
+                        "#CVE (Mitre V+P)",
+                        "CVE-ID (Mitre V+P)"
+                        }, total_map );
+        _outputReport( product2cveid_table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    private Table _buildOvalProduct2CveIdTable(
+                    final String[] header,
+                    final Map<String,Set<String>> map
+                    )
+    {
+        Table  table = new Table( header );
+        for (String  product : map.keySet()) {
+            Set<String>  ids = map.get( product );
+            table.addRow( new Object[] {
+                            product,
+                            ids.size(),
+                            ids
+            } );
+        }
+
+        return table;
+    }
+
+
+
+    // product name -> {CVE-ID}
+    private Map<String,Set<String>> _buildOvalProduct2CveMapping(
+                    final Collection<DefinitionType> def_list,
+                    final int year
+                    )
+    {
+        Map<String,Set<String>>  map = new TreeMap<String,Set<String>>();
+
+        String  cve_prefix = "CVE-";
+        if (year != 0) {
+            cve_prefix = cve_prefix + String.valueOf( year );   //e.g. CVE-2013
+        }
+
+        for (DefinitionType  def : def_list) {
+            Collection<AffectedType>  affected_list = def.getMetadata().getAffected();
+            if (affected_list == null) {
+                continue;
+            }
+
+            for (AffectedType  affected : affected_list) {
+                for (Product  product : affected.getProduct()) {
+                    String  product_name = _ovalUnifiedProductName( product.getName() );
+
+                    Set<String>  cve_list = map.get( product_name );
+                    if (cve_list == null) {
+                        cve_list = new TreeSet<String>();
+                        map.put( product_name, cve_list );
+                    }
+
+                    Collection<ReferenceType>  ref_list = def.getMetadata().getReference();
+                    if (ref_list == null) {
+                        continue;
+                    }
+                    for (ReferenceType  ref : ref_list) {
+                        if ("CVE".equals( ref.getSource() )) {
+                            String  cve_id = ref.getRefId();
+                            if (cve_id.startsWith( cve_prefix )) {
+                                cve_list.add( cve_id );
+                            }
+                        }
+                    }
+                }
+            }//affected
+        }
+
+        return map;
+    }
+
+
+
+
+
+
+    private static final OvalProductMapping  _OVAL_PRODUCT_NAME_MAPPING_ =
+                    new OvalProductMapping( "/oval-simple-product-mapping.properties" );
+
+    /**
+     */
+    private static final String _ovalUnifiedProductName(
+                    final String name
+                    )
+    {
+        String  product_name = name.toLowerCase();
+        //NOTE: there may be upper case name, lower case name, and mixture name
+        // e.g. "Adobe AIR" and "Adobe Air"
+
+        String  unified_name = _OVAL_PRODUCT_NAME_MAPPING_.toAppropriateName( product_name );
+
+        return (unified_name == null ? product_name : unified_name);
+    }
+
+
+
+
+
+
+
 
 
 
     ////////////////////////////////////////////////////////////////////////////
     // OLD impl
     ////////////////////////////////////////////////////////////////////////////
+
+
+    /**
+     * OVAL: Coverage of CVE by Product
+     */
+    public void reportOvalCoverageOfCveByProduct(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** OVAL: Coverage of CVE by Product *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "oval_coverage-of-cve-by-product_";
+        final String[]  table_header = new String[] { "Product", "CVE", "CVE ID" };
+
+        Map<String,Collection<String>>  total_map = new TreeMap<String,Collection<String>>();
+
+        for (int  year = year_begin; year <= year_end; year++) {
+            /* single year */
+            Collection<DefinitionType>  def_list =
+                            _oval_analyzer.findOvalVulnDefExceptDeprecatedByCveYear( year, OvalRepositoryProvider.MITRE );
+            Map<String,Collection<String>>  year_map = _buildOvalProductCveMap( def_list, year );
+            _outputReportOvalCoverageOfCveByProduct( year_map, table_header, filename_prefix + year );
+
+            /* total */
+            _meargeProductCveMapTo( year_map, total_map );
+
+        }
+
+        _outputReportOvalCoverageOfCveByProduct( total_map, table_header,
+                        filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+    /**
+     * mozilla firefox, {CVE-2010-0176, ...}
+     * adobe reader,    {CVE-2012-xxxx, ...}
+     * ...
+     */
+    private Map<String,Collection<String>> _buildOvalProductCveMap(
+                    final Collection<DefinitionType> def_list,
+                    final int year
+                    )
+    {
+        Map<String,Collection<String>>  map = new TreeMap<String,Collection<String>>();
+
+        String  cve_prefix = "CVE-";
+        if (year != 0) {
+            cve_prefix = cve_prefix + String.valueOf( year );
+        }
+
+        for (DefinitionType  def : def_list) {
+            Collection<AffectedType>  affected_list = def.getMetadata().getAffected();
+            if (affected_list == null) {
+                continue;
+            }
+
+            for (AffectedType  affected : affected_list) {
+                for (Product  product : affected.getProduct()) {
+                    String  product_name = ovalUnifiedProductName( product.getName() );
+
+                    Collection<String>  cve_list = map.get( product_name );
+                    if (cve_list == null) {
+                        cve_list = new TreeSet<String>();
+                        map.put( product_name, cve_list );
+                    }
+
+                    Collection<ReferenceType>  ref_list = def.getMetadata().getReference();
+                    if (ref_list == null) {
+                        continue;
+                    }
+                    for (ReferenceType  ref : ref_list) {
+                        if ("CVE".equals( ref.getSource() )) {
+                            String  cve_id = ref.getRefId();
+                            if (cve_id.startsWith( cve_prefix )) {
+                                cve_list.add( cve_id );
+                            }
+                        }
+                    }
+                }
+            }//affected
+        }//def
+
+        return map;
+    }
+
+
+    private void _meargeProductCveMapTo(
+                    final Map<String,Collection<String>> source_map,
+                    final Map<String,Collection<String>> dest_map
+                    )
+    {
+        for (String  product_name : source_map.keySet()) {
+            Collection<String>  source_cve_list = source_map.get( product_name );
+
+            Collection<String>  dest_cve_list = dest_map.get( product_name );
+            if (dest_cve_list == null) {
+                dest_cve_list = new TreeSet<String>();
+                dest_map.put( product_name, dest_cve_list );
+            }
+
+            dest_cve_list.addAll( source_cve_list );
+        }
+    }
+
+
+
+    private void _outputReportOvalCoverageOfCveByProduct(
+                    final Map<String,Collection<String>> product_cve_map,
+                    final String[] table_header,
+                    final String filename
+                    )
+    throws Exception
+    {
+        File  file = _createOutputFile( filename + "_" + System.currentTimeMillis() + ".csv" );
+        _println( System.out, "output file: " + file.getName() );
+        Table  table = _buildReportOvalCoverageOfCveByProduct( table_header, product_cve_map );
+
+        _outputReport( table, filename );
+
+    }
+
+
+    private Table _buildReportOvalCoverageOfCveByProduct(
+                    final String[] table_header,
+                    final Map<String,Collection<String>> product_cve_map
+                    )
+    {
+        Table  table = new Table( table_header );
+
+        for (String  product_name : product_cve_map.keySet()) {
+            Collection<String>  cve_list = product_cve_map.get( product_name );
+
+            int  index = 0;
+            Object[]  values = new Object[table.columns()];
+            values[index++] = "\"" + product_name + "\"";
+            values[index++] = cve_list.size();
+            values[index++] = cve_list;
+
+            table.addRow( values );
+        }
+
+        return table;
+    }
+
+
 
 
 
@@ -1563,8 +1862,6 @@ public class StatReporter
         map.put( "java development kit",        java );
         map.put( "java runtime environment",    java );
         map.put( "oracle java se",              java );
-        map.put( "java development kit",        java );
-        map.put( "java runtime environment",    java );
 
         String  office = "microsoft office";
         map.put( "microsoft office xp",             office );
