@@ -19,6 +19,7 @@ import jp.go.aist.six.oval.model.common.ClassEnumeration;
 import jp.go.aist.six.oval.model.common.FamilyEnumeration;
 import jp.go.aist.six.oval.model.definitions.AffectedType;
 import jp.go.aist.six.oval.model.definitions.DefinitionType;
+import jp.go.aist.six.oval.model.definitions.ReferenceType;
 import jp.go.aist.six.stat.model.OvalRepositoryProvider;
 import jp.go.aist.six.stat.model.Table;
 import jp.go.aist.six.stat.model.VulnerabilitySummary;
@@ -27,6 +28,8 @@ import jp.go.aist.six.vuln.model.scap.cvss.CvssImpactType;
 import jp.go.aist.six.vuln.model.scap.vulnerability.CweReferenceType;
 import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerabilityType;
 import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerableSoftwareType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 
@@ -34,6 +37,13 @@ import jp.go.aist.six.vuln.model.scap.vulnerability.VulnerableSoftwareType;
  */
 public class StatReporter
 {
+
+    /**
+     * Logger.
+     */
+    private static final Logger  _LOG_ = LoggerFactory.getLogger( StatReporter.class );
+
+
 
     public static final int  PERIOD_BEGIN = 1999;
     public static final int  PERIOD_END = 2013;
@@ -50,7 +60,8 @@ public class StatReporter
 //        reporter.statNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
 //        reporter.statNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
 //        reporter.statNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );
-        reporter.statOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );
+//        reporter.statOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );
+        reporter.statOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
 
 //        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
 //        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
@@ -611,6 +622,7 @@ public class StatReporter
             Table  id_table_p = _buildCve2OvalMapping( id_table_header, cve2oval_mapping_p );
             _outputReport( id_table_p, filename_prefix + cve_year + "-mitre-p" );
 
+            //class=VULNERABILITY & PATCH
             Map<String,Set<String>>  cve2oval_mapping_vp = _mergeCve2OvalMappings( cve2oval_mapping_v, cve2oval_mapping_p );
             Table  id_table_vp = _buildCve2OvalMapping( id_table_header, cve2oval_mapping_vp );
             _outputReport( id_table_vp, filename_prefix + cve_year + "-mitre" );
@@ -678,6 +690,210 @@ public class StatReporter
     }
 
 
+
+
+    /**
+     * OVAL: Def by OS Family
+     *
+     * Total Stat: {Family, #CVE(1999--2013), #OVAL-Def(1999--2013), #CVE(1999), #OVAL-Def(1999), ..., 2013}
+     * CVE by year: {Family, [CVE-IDs]}
+     * OVAL by year: {Family, [OVAL-IDs]}
+     */
+    public void statOvalVulnDefByFamily(
+                    final int year_begin,
+                    final int year_end
+                    )
+    throws Exception
+    {
+        String  title = "***** OVAL: Def by Family *****";
+        _println( System.out, title );
+
+        final String  filename_prefix = "oval_def-by-family_";
+
+//        Map<Integer,Map<String,Set<String>>>  historical_family2ovalid_mapping = new HashMap<Integer,Map<String,Set<String>>>();
+//        Map<Integer,Map<String,Set<String>>>  historical_family2cveid_mapping  = new HashMap<Integer,Map<String,Set<String>>>();
+
+        Map<String,Set<String>>  total_family2ovalid_mapping = new HashMap<String,Set<String>>();
+        Map<String,Set<String>>  total_family2cveid_mapping  = new HashMap<String,Set<String>>();
+        for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
+            //class=VULNERABILITY
+            Map<String,Set<DefinitionType>>  family2def_mapping_v =
+                            _oval_analyzer.getFamily2DefMappingByCveYear( cve_year, ClassEnumeration.VULNERABILITY, OvalRepositoryProvider.MITRE );
+            Map<String,Set<String>>  yearly_family2ovalid_mapping_v = _buildFamily2OvalDefIdMapping( family2def_mapping_v );
+            Map<String,Set<String>>  yearly_family2cveid_mapping_v  = _buildFamily2CveIdMapping( family2def_mapping_v, cve_year );
+
+            Table  family2ovalid_table_v = _buildFamily2IdTable( new String[] {
+                            "OS-Family",
+                            "#OVAL-Def (Mitre V)",
+                            "OVAL-Def-ID (Mitre V)"
+                            }, yearly_family2ovalid_mapping_v );
+            _outputReport( family2ovalid_table_v, filename_prefix + cve_year + "-mitre-v-oval" );
+            Table  family2cveid_table_v = _buildFamily2IdTable( new String[] {
+                            "OS-Family",
+                            "#CVE (Mitre V)",
+                            "CVE-ID (Mitre V)"
+                            }, yearly_family2cveid_mapping_v );
+            _outputReport( family2cveid_table_v, filename_prefix + cve_year + "-mitre-v-cve" );
+
+            _meargeMapping( yearly_family2ovalid_mapping_v, total_family2ovalid_mapping );
+            _meargeMapping( yearly_family2cveid_mapping_v,  total_family2cveid_mapping  );
+
+            //class=PATCH
+            Map<String,Set<DefinitionType>>  family2def_mapping_p =
+                            _oval_analyzer.getFamily2DefMappingByCveYear( cve_year, ClassEnumeration.PATCH, OvalRepositoryProvider.MITRE );
+            Map<String,Set<String>>  yearly_family2ovalid_mapping_p = _buildFamily2OvalDefIdMapping( family2def_mapping_p );
+            Map<String,Set<String>>  yearly_family2cveid_mapping_p  = _buildFamily2CveIdMapping( family2def_mapping_p, cve_year );
+
+            Table  family2ovalid_table_p = _buildFamily2IdTable( new String[] {
+                            "OS-Family",
+                            "#OVAL-Def (Mitre P)",
+                            "OVAL-Def-ID (Mitre P)"
+                            }, yearly_family2ovalid_mapping_p );
+            _outputReport( family2ovalid_table_p, filename_prefix + cve_year + "-mitre-p-oval" );
+            Table  family2cveid_table_p = _buildFamily2IdTable( new String[] {
+                            "OS-Family",
+                            "#CVE (Mitre P)",
+                            "CVE-ID (Mitre P)"
+                            }, yearly_family2cveid_mapping_p );
+            _outputReport( family2cveid_table_p, filename_prefix + cve_year + "-mitre-p-cve" );
+
+            _meargeMapping( yearly_family2ovalid_mapping_p, total_family2ovalid_mapping );
+            _meargeMapping( yearly_family2cveid_mapping_p,  total_family2cveid_mapping  );
+
+
+//            historical_family2ovalid_mapping.put( cve_year, yearly_family2ovalid_mapping );
+//            historical_family2cveid_mapping.put(  cve_year, yearly_family2cveid_mapping );
+        }
+
+        Table  total_table = _buildOvalByFamilyTotalTable(
+                        new String[] {
+                                        "Family",
+                                        "#OVAL-Def (Mitre V+P)",
+                                        "#CVE-Covered"
+                        },
+                        total_family2ovalid_mapping, total_family2cveid_mapping );
+        _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
+    }
+
+
+
+    private Table _buildOvalByFamilyTotalTable(
+                    final String[] header,
+                    final Map<String,Set<String>> family2ovalid_map,
+                    final Map<String,Set<String>> family2cveid_map
+                    )
+    {
+        Table  table = new Table( header );
+
+        for (String  family : family2ovalid_map.keySet()) {
+            table.addRow( new Object[] {
+                            family,
+                            family2ovalid_map.get( family ).size(),
+                            family2cveid_map.get( family ).size(),
+            });
+        }
+
+        return table;
+    }
+
+
+
+    private void _meargeMapping(
+                    final Map<String,Set<String>> from_map,
+                    final Map<String,Set<String>> to_map
+                    )
+    {
+        for (String  key : from_map.keySet()) {
+            Set<String>  from_values = from_map.get( key );
+            Set<String>    to_values =   to_map.get( key );
+            if (to_values == null) {
+                to_values = new TreeSet<String>();
+                to_map.put( key, to_values );
+            }
+            to_values.addAll( from_values );
+        }
+    }
+
+
+
+    private Map<String,Set<String>> _buildFamily2OvalDefIdMapping(
+                    final Map<String,Set<DefinitionType>> family2def_map
+                    )
+    {
+        Map<String,Set<String>>  family2id_map = new HashMap<String,Set<String>>();
+        for (String  family : family2def_map.keySet()) {
+            Set<String>  ids = family2id_map.get( family );
+            if (ids == null) {
+                ids = new TreeSet<String>();
+                family2id_map.put( family, ids );
+            }
+            for (DefinitionType  def : family2def_map.get( family )) {
+                ids.add( def.getOvalId() );
+            }
+        }
+
+        return family2id_map;
+    }
+
+
+    private Table _buildFamily2IdTable(
+                    final String[] header,
+                    final Map<String,Set<String>> family2id_map
+                    )
+    {
+        Table  table = new Table( header );
+        for (String  family : family2id_map.keySet()) {
+            Set<String>  ids = family2id_map.get( family );
+            table.addRow( new Object[] {
+                            family,
+                            ids.size(),
+                            ids
+            } );
+        }
+
+        return table;
+    }
+
+
+
+    private Map<String,Set<String>> _buildFamily2CveIdMapping(
+                    final Map<String,Set<DefinitionType>> family2def_map,
+                    final int cve_year
+                    )
+    throws Exception
+    {
+        final String  cve_prefix = "CVE-" + cve_year + "-";  // e.g. "CVE-2013-"
+
+        Map<String,Set<String>>  family2id_map = new HashMap<String,Set<String>>();
+        for (String  family : family2def_map.keySet()) {
+            Set<String>  ids = family2id_map.get( family );
+            if (ids == null) {
+                ids = new TreeSet<String>();
+                family2id_map.put( family, ids );
+            }
+            for (DefinitionType  def : family2def_map.get( family )) {
+                Collection<ReferenceType>  ref_list = def.getMetadata().getReference();
+                if (ref_list == null) {
+                    throw new RuntimeException( "INTERNAL ERROR: NO reference in OVAL Def.: ID="
+                    + def.getOvalId() );
+                }
+
+                for (ReferenceType  ref : ref_list) {
+                    if ("CVE".equals( ref.getSource() )) {
+                        String  cve_id = ref.getRefId();
+                        if (cve_id.startsWith( cve_prefix )) {
+                            if (ids.contains( cve_id )) {
+                                _LOG_.warn( "Duplicated CVE Reference: CVE=" + cve_id );
+                            }
+                            ids.add( cve_id );
+                        }
+                    }
+                }
+            }
+        }
+
+        return family2id_map;
+    }
 
 
 

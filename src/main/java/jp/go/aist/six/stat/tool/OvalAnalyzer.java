@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import jp.go.aist.six.oval.core.SixOvalContext;
 import jp.go.aist.six.oval.model.common.ClassEnumeration;
+import jp.go.aist.six.oval.model.definitions.AffectedType;
 import jp.go.aist.six.oval.model.definitions.DefinitionType;
 import jp.go.aist.six.oval.model.definitions.ReferenceType;
 import jp.go.aist.six.oval.repository.DefinitionQueryParams;
@@ -144,6 +145,53 @@ public class OvalAnalyzer
 
 
     /**
+     * <os-family, [oval-def]>
+     */
+    public Map<String,Set<DefinitionType>> getFamily2DefMappingByCveYear(
+                    final int cve_year,
+                    final ClassEnumeration def_clazz,
+                    final OvalRepositoryProvider def_provider
+                    )
+    throws Exception
+    {
+        List<DefinitionType>  def_list = findDefByCveYear( cve_year, def_clazz, def_provider );
+        final String  cve_prefix = _createCveIdPrefix( cve_year );  // e.g. "CVE-2013-"
+
+        //<OS-Family, [OVAL-Defs]>
+        Map<String,Set<DefinitionType>>  map = new TreeMap<String,Set<DefinitionType>>();
+        for (DefinitionType  def : def_list ) {
+            String  oval_id = def.getOvalId();
+            Collection<ReferenceType>  ref_list = def.getMetadata().getReference();
+            if (ref_list == null) {
+                //INTERNAL ERROR!
+                throw new RuntimeException( "INTERNAL ERROR: NO reference in OVAL Def.: ID=" + oval_id );
+            }
+
+            for (ReferenceType  ref : ref_list) {
+                if ("CVE".equals( ref.getSource() )) {
+                    String  cve_id = ref.getRefId();
+                    if (cve_id.startsWith( cve_prefix )) {
+                        for (AffectedType  affected : def.getMetadata().getAffected()) {
+                            String  family  = affected.getFamily().name();
+                            Set<DefinitionType>  defs = map.get( family );
+                            if (defs == null) {
+                                defs = new TreeSet<DefinitionType>();
+                                map.put( family, defs );
+                            }
+                            defs.add( def );
+                        }
+                    }
+                }
+            }
+        }
+
+        return map;
+    }
+
+
+
+
+    /**
      * {CVE-ID, [OVAL-IDs]}
      */
     public Map<String,Set<String>> getCve2DefMappingByCveYear(
@@ -183,6 +231,7 @@ public class OvalAnalyzer
 
         return map;
     }
+
 
 
 
