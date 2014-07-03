@@ -443,12 +443,17 @@ public class StatReporter
         String[]  table_header = new String[] {
                         "Product",
                         "Part",
-                        "NVD/CVE",
+                        "#NVD/CVE",
                         "CVSS (avg.)",
                         "CVE ID"
                         };
 
+        final int  year_past3_begin = year_end - 3 + 1;
+        final boolean  compute_past3 = (year_end - year_begin + 1) >= 3;
+
         Map<String,Collection<VulnerabilitySummary>>  total_prod2vuln_map =
+                        new TreeMap<String,Collection<VulnerabilitySummary>>();
+        Map<String,Collection<VulnerabilitySummary>>  past3_prod2vuln_map =
                         new TreeMap<String,Collection<VulnerabilitySummary>>();
 
         for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
@@ -456,11 +461,23 @@ public class StatReporter
             Table  year_table = _buildNvdCveByProductReport2( table_header, prod2vuln_map );
             _outputReport( year_table, filename_prefix + cve_year );
 
-            _meargeProd2VulnMap( prod2vuln_map, total_prod2vuln_map );
+            _mergeProd2VulnMap( prod2vuln_map, total_prod2vuln_map );
+            if (compute_past3) {
+                if (year_past3_begin <= cve_year) {
+                    _mergeProd2VulnMap( prod2vuln_map, past3_prod2vuln_map );
+                }
+
+            }
         }
 
         Table  total_table = _buildNvdCveByProductReport2( table_header, total_prod2vuln_map );
         _outputReport( total_table, filename_prefix + year_begin + "-" + year_end );
+
+        if (compute_past3) {
+            Table  past3_table = _buildNvdCveByProductReport2( table_header, past3_prod2vuln_map );
+            _outputReport( past3_table, filename_prefix + year_past3_begin + "-" + year_end );
+
+        }
     }
 
 
@@ -558,7 +575,7 @@ public class StatReporter
 
 
 
-    private void _meargeProd2VulnMap(
+    private void _mergeProd2VulnMap(
                     final Map<String,Collection<VulnerabilitySummary>> source_map,
                     final Map<String,Collection<VulnerabilitySummary>> dest_map
                     )
@@ -917,7 +934,11 @@ public class StatReporter
 
         final String  filename_prefix = "oval_coverage-of-cve-by-product_";
 
+        final int  year_past3_begin = year_end - 3 + 1;
+        final boolean  compute_past3 = (year_end - year_begin + 1) >= 3;
+
         Map<String,Set<String>>  total_map = new TreeMap<String,Set<String>>();
+        Map<String,Set<String>>  past3_map = new TreeMap<String,Set<String>>();
 
         for (int  cve_year = year_begin; cve_year <= year_end; cve_year++) {
             //class=VULNERABILITY
@@ -930,7 +951,6 @@ public class StatReporter
                             "CVE-ID (Mitre V)"
                             }, yearly_v_map );
             _outputReport( product2cveid_v_table, filename_prefix + cve_year + "-mitre-v" );
-            _mergeMapping( yearly_v_map, total_map );
 
             //class=PATCH
             Collection<DefinitionType>  def_p_list =
@@ -942,7 +962,16 @@ public class StatReporter
                             "CVE-ID (Mitre P)"
                             }, yearly_p_map );
             _outputReport( product2cveid_p_table, filename_prefix + cve_year + "-mitre-p" );
+
+            _mergeMapping( yearly_v_map, total_map );
             _mergeMapping( yearly_p_map, total_map );
+            if (compute_past3) {
+                if (year_past3_begin <= cve_year) {
+                    _mergeMapping( yearly_v_map, past3_map );
+                    _mergeMapping( yearly_p_map, past3_map );
+                }
+
+            }
         }
 
         Table  product2cveid_table = _buildOvalProduct2CveIdTable( new String[] {
@@ -951,6 +980,15 @@ public class StatReporter
                         "CVE-ID (Mitre V+P)"
                         }, total_map );
         _outputReport( product2cveid_table, filename_prefix + year_begin + "-" + year_end );
+
+        if (compute_past3) {
+            Table  product2cveid_past3_table = _buildOvalProduct2CveIdTable( new String[] {
+                            "OVAL-Product",
+                            "#CVE (Mitre V+P)",
+                            "CVE-ID (Mitre V+P)"
+                            }, past3_map );
+            _outputReport( product2cveid_past3_table, filename_prefix + year_past3_begin + "-" + year_end );
+        }
     }
 
 
