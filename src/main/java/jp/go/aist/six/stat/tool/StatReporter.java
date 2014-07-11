@@ -57,14 +57,15 @@ public class StatReporter
     throws Exception
     {
         StatReporter  reporter = new StatReporter();
-//        reporter.statNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
-//        reporter.statNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
-//        reporter.statNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
-//        reporter.statNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );
-//        reporter.statOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );
-//        reporter.statOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
+        reporter.statNumberOfEntries( PERIOD_BEGIN, PERIOD_END );
+        reporter.statNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );
+        reporter.statNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );
+        reporter.statNvdCveByProduct( PERIOD_BEGIN, PERIOD_END );
+        reporter.statOvalCoverageOfCve( PERIOD_BEGIN, PERIOD_END );
+        reporter.statOvalVulnDefByFamily( PERIOD_BEGIN, PERIOD_END );
         reporter.statOvalCoverageOfCveByProduct( PERIOD_BEGIN, PERIOD_END );
 
+//TODO: clean up the unnecessary code.
 //        reporter.reportNumberOfEntries( PERIOD_BEGIN, PERIOD_END );   //A.1, A.2
 //        reporter.reportNvdCveByCvss( PERIOD_BEGIN, PERIOD_END );      //B.1
 //        reporter.reportNvdCveByCwe( PERIOD_BEGIN, PERIOD_END );       //B.2
